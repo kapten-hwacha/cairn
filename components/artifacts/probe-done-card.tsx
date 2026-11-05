@@ -1,6 +1,7 @@
 "use client";
 
 import { ClipboardCheckIcon } from "lucide-react";
+import { ToolContentResponse } from "@/components/ai-elements/message";
 import { parseProbeDoneInput, type ProbeDoneResult, type ProbeStrandStatus } from "@/src/core";
 
 const STATUS_BADGES: Record<ProbeStrandStatus, { label: string; className: string }> = {
@@ -64,7 +65,7 @@ export function ProbeDoneCard({ part }: { part: { input?: unknown; output?: unkn
 						return (
 							<div key={i} className="rounded-lg bg-background/60 px-3 py-2">
 								<div className="flex items-center gap-2">
-									<span className="text-sm font-medium">{s.strand}</span>
+									<ToolContentResponse className="text-sm font-medium">{s.strand}</ToolContentResponse>
 									{badge ? (
 										<span
 											className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}
@@ -73,12 +74,12 @@ export function ProbeDoneCard({ part }: { part: { input?: unknown; output?: unkn
 										</span>
 									) : null}
 								</div>
-								<div className="mt-0.5 text-sm text-muted-foreground">{s.assessment}</div>
+								<ToolContentResponse className="mt-0.5 text-sm text-muted-foreground">{s.assessment}</ToolContentResponse>
 							</div>
 						);
 					})}
 					{assessment?.summary && (
-						<p className="px-1 text-sm text-muted-foreground">{assessment.summary}</p>
+						<ToolContentResponse className="px-1 text-sm text-muted-foreground">{assessment.summary}</ToolContentResponse>
 					)}
 				</div>
 			) : (
