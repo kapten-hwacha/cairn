@@ -560,15 +560,17 @@ export async function graphSnapshot(deps: GraphDeps, sourceNames: Readonly<Recor
 	}
 	const sessions: Record<string, string> = {};
 	const fileSources: Record<string, string> = {};
-	const allSources = (await deps.graphStore.readSources?.()) ?? [];
+	// One read of the sources map per snapshot: readSources() re-reads and
+	// re-parses sources.json on every call.
+	const sourcePaths = new Map(((await deps.graphStore.readSources?.()) ?? []).map((s) => [s.id, s.filePath]));
 	for (const id of sourceIds) {
 		const chat = await deps.chatStore.getChat(id);
 		if (chat) {
 			sessions[id] = chat.title;
 			continue;
 		}
-		const source = allSources.find((s) => s.id === id);
-		if (source) fileSources[id] = source.filePath;
+		const filePath = sourcePaths.get(id);
+		if (filePath !== undefined) fileSources[id] = filePath;
 	}
 
 	const nodeSessions: Record<string, string[]> = {};
