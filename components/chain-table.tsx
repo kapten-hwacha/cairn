@@ -572,6 +572,7 @@ export function ChainTableBody({
 															key={id}
 															{...chainRow(["prop", group.key, chain.id, id], depth + 2)}
 															data-testid={`prop-row-${id}`}
+															data-chain-statement
 															className="flex items-start gap-2 py-1 pl-21 pr-3"
 														>
 															{selectMode ? <RowCheckbox
