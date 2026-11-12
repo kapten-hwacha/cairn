@@ -76,6 +76,7 @@ import { useServerEvent, useServerResync } from "./server-events";
 import { TopBar } from "@/components/top-bar";
 import { DeleteSourceDialog } from "@/components/delete-source-dialog";
 import { LatexGlyph } from "@/components/latex-glyph";
+import { ToolContentResponse } from "@/components/ai-elements/message";
 
 /** The sortable columns (owner ruling: all three — consistency). */
 export type ChainSortCol = "name" | "props" | "created";
@@ -579,8 +580,13 @@ export function ChainTableBody({
 																testid={`prop-checkbox-${id}`}
 																label={`Select node ${node.name}`}
 															/> : <span aria-hidden="true" className="size-3.5 shrink-0" />}
-															<span className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
-																{node.statement}
+															<div className="min-w-0 flex-1">
+																<ToolContentResponse
+																	mode="static"
+																	className="text-muted-foreground [--font-prose:var(--font-ui)] [--lh-prose-size:var(--text-xs)] [--lh-prose-leading:1.625] [&_[data-streamdown=inline-code]]:[font-size:inherit] [&_[data-streamdown=inline-code]]:[color:inherit]"
+																>
+																	{node.statement}
+																</ToolContentResponse>
 																{review && (() => {
 																	const label =
 																		review.stage === "retained"
@@ -603,7 +609,7 @@ export function ChainTableBody({
 																		</span>
 																	);
 																})()}
-															</span>
+															</div>
 															<span className="w-14 shrink-0" />
 															<span className="w-20 shrink-0" />
 														</div>
