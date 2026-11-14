@@ -86,6 +86,9 @@ export interface SqliteStoreBackend {
 	readPromptOverride(segmentPath: string): string | null;
 	writePromptOverride(segmentPath: string, text: string): void;
 	deletePromptOverride(segmentPath: string): void;
+
+	readAuthFile(): string | null;
+	writeAuthFile(content: string): void;
 }
 
 type SqliteDb = {
@@ -131,7 +134,10 @@ function rowToChatRecord(row: Record<string, unknown>): ChatRecord {
 	return record;
 }
 
-function buildBackend(db: SqliteDb): SqliteStoreBackend {
+function buildBackend(
+	db: SqliteDb,
+	authFile: { read: () => string | null; write: (content: string) => void },
+): SqliteStoreBackend {
 	const bumpRevision = () => {
 		db.prepare("INSERT INTO graph_events (event_json) VALUES (?)").run(
 			JSON.stringify({ type: "revision", at: new Date().toISOString() }),
@@ -731,6 +737,14 @@ function buildBackend(db: SqliteDb): SqliteStoreBackend {
 		deletePromptOverride(segmentPath) {
 			db.prepare("DELETE FROM prompt_overrides WHERE segment_path = ?").run(segmentPath);
 		},
+
+		readAuthFile() {
+			return authFile.read();
+		},
+
+		writeAuthFile(content) {
+			authFile.write(content);
+		},
 	};
 
 	return backend;
@@ -763,7 +777,11 @@ export function getSqliteBackend(): Promise<SqliteStoreBackend | null> {
 			const sqlite = await import(/* @vite-ignore */ "node:sqlite");
 			const db = new sqlite.DatabaseSync(dbPath) as unknown as SqliteDb;
 			db.exec("PRAGMA busy_timeout = 5000;");
-			return buildBackend(db);
+			const authPath = path.join(path.dirname(dbPath), "auth.json");
+			return buildBackend(db, {
+				read: () => (fs.existsSync(authPath) ? fs.readFileSync(authPath, "utf8") : null),
+				write: (content: string) => fs.writeFileSync(authPath, content, { encoding: "utf8", mode: 0o600 }),
+			});
 		} catch (err) {
 			console.warn("SQLite dev backend unavailable, falling back to memory:", err);
 			return null;

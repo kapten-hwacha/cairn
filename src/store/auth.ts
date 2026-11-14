@@ -11,11 +11,16 @@ import { CUSTOM_PROVIDER } from "../core/auth-keys.ts";
 import { CUSTOM_AUTH_BINDING, parseCustomAuthBinding, type CustomAuthBinding } from "../core/custom-provider-auth.ts";
 import { getTauriInvoke } from "../worker/host-bridge.ts";
 import { getMemoryAuthContent, setMemoryAuthContent } from "./memory-backend.ts";
+import { getSqliteBackend } from "./sqlite-backend.ts";
 
 async function readAuthContent(): Promise<string | null> {
 	const invoke = getTauriInvoke();
 	if (invoke) {
 		return await invoke<string | null>("lh_auth_read", { filename: "auth.json" });
+	}
+	const db = await getSqliteBackend();
+	if (db) {
+		return db.readAuthFile();
 	}
 	return getMemoryAuthContent();
 }
@@ -24,9 +29,14 @@ async function writeAuthContent(content: string): Promise<void> {
 	const invoke = getTauriInvoke();
 	if (invoke) {
 		await invoke("lh_auth_write", { filename: "auth.json", content });
-	} else {
-		setMemoryAuthContent(content);
+		return;
 	}
+	const db = await getSqliteBackend();
+	if (db) {
+		db.writeAuthFile(content);
+		return;
+	}
+	setMemoryAuthContent(content);
 }
 
 async function readMap(): Promise<Record<string, string>> {
