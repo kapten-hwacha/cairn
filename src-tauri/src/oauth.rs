@@ -72,6 +72,62 @@ pub fn start_oauth_listener_internal(
     Ok(port)
 }
 
+fn send_empty_response(stream: &mut TcpStream, status_line: &str) {
+    let resp = format!("{status_line}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+    let _ = stream.write_all(resp.as_bytes());
+    let _ = stream.flush();
+    let _ = stream.shutdown(std::net::Shutdown::Write);
+}
+
+fn is_valid_host(headers: &[(String, String)], my_port: u16) -> bool {
+    let mut hosts = headers.iter().filter(|(k, _)| k == "host");
+    let Some((_, value)) = hosts.next() else {
+        return false;
+    };
+    if hosts.next().is_some() {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    lower == "127.0.0.1"
+        || lower == "localhost"
+        || lower == format!("127.0.0.1:{my_port}")
+        || lower == format!("localhost:{my_port}")
+}
+
+fn is_valid_callback_query(url_raw: &str, my_port: u16) -> bool {
+    if !url_raw.starts_with('/') || url_raw.starts_with("//") {
+        return false;
+    }
+    let origin = format!("http://127.0.0.1:{my_port}");
+    let Ok(url) = url::Url::parse(&format!("{origin}{url_raw}")) else {
+        return false;
+    };
+    if url.origin().ascii_serialization() != origin
+        || url.path() != "/auth/callback"
+        || url.fragment().is_some()
+    {
+        return false;
+    }
+    let mut state: Option<String> = None;
+    let mut code: Option<String> = None;
+    let mut error: Option<String> = None;
+    for (key, value) in url.query_pairs() {
+        let target = match key.as_ref() {
+            "state" => &mut state,
+            "code" => &mut code,
+            "error" => &mut error,
+            _ => continue,
+        };
+        if target.replace(value.into_owned()).is_some() {
+            return false;
+        }
+    }
+    let has_state = state.as_deref().is_some_and(|s| !s.is_empty());
+    let has_code_or_error = code.as_deref().is_some_and(|c| !c.is_empty())
+        || error.as_deref().is_some_and(|e| !e.is_empty());
+    has_state && has_code_or_error
+}
+
 fn handle_connection(
     stream: &mut TcpStream,
     shutdown: &Arc<AtomicBool>,
@@ -116,10 +172,7 @@ fn handle_connection(
     let path_part = url_raw.split('?').next().unwrap_or(url_raw);
 
     if method != "GET" || path_part != "/auth/callback" {
-        let resp = "HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n";
-        let _ = stream.write_all(resp.as_bytes());
-        let _ = stream.flush();
-        let _ = stream.shutdown(std::net::Shutdown::Write);
+        send_empty_response(stream, "HTTP/1.1 404 Not Found");
         return;
     }
 
@@ -131,6 +184,11 @@ fn handle_connection(
         if let Some((k, v)) = line.split_once(':') {
             headers.push((k.trim().to_lowercase(), v.trim().to_string()));
         }
+    }
+
+    if !is_valid_host(&headers, my_port) || !is_valid_callback_query(url_raw, my_port) {
+        send_empty_response(stream, "HTTP/1.1 400 Bad Request");
+        return;
     }
 
     let payload = OAuthRequestPayload {
@@ -145,10 +203,27 @@ fn handle_connection(
 
     match rx.recv_timeout(std::time::Duration::from_secs(60)) {
         Ok(resp) => {
+            let has_header = |name: &str| {
+                resp.headers
+                    .iter()
+                    .any(|(k, _)| k.eq_ignore_ascii_case(name))
+            };
             let status_line = format!("HTTP/1.1 {} OK\r\n", resp.status);
             let mut head_str = status_line;
-            for (k, v) in resp.headers {
+            for (k, v) in &resp.headers {
                 head_str.push_str(&format!("{k}: {v}\r\n"));
+            }
+            for (default_key, default_val) in [
+                (
+                    "Content-Security-Policy",
+                    "default-src 'none'; style-src 'unsafe-inline'",
+                ),
+                ("X-Content-Type-Options", "nosniff"),
+                ("Cache-Control", "no-store"),
+            ] {
+                if !has_header(default_key) {
+                    head_str.push_str(&format!("{default_key}: {default_val}\r\n"));
+                }
             }
             head_str.push_str(&format!(
                 "Content-Length: {}\r\nConnection: close\r\n\r\n",
@@ -160,11 +235,7 @@ fn handle_connection(
             let _ = stream.shutdown(std::net::Shutdown::Write);
         }
         Err(_) => {
-            let resp =
-                "HTTP/1.1 504 Gateway Timeout\r\nConnection: close\r\nContent-Length: 0\r\n\r\n";
-            let _ = stream.write_all(resp.as_bytes());
-            let _ = stream.flush();
-            let _ = stream.shutdown(std::net::Shutdown::Write);
+            send_empty_response(stream, "HTTP/1.1 504 Gateway Timeout");
         }
     }
 
@@ -371,6 +442,191 @@ mod tests {
         let port2 = start_oauth_listener().expect("second attempt succeeds after close");
         assert_ne!(port1, 0);
         assert_ne!(port2, 0);
+        close_oauth_listener();
+    }
+
+    fn send_raw_request(port: u16, req: &str) -> String {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect succeeds");
+        stream.write_all(req.as_bytes()).expect("write succeeds");
+        let mut resp = String::new();
+        let _ = stream.read_to_string(&mut resp);
+        resp
+    }
+
+    #[test]
+    fn forged_host_returns_400_without_consuming_listener() {
+        let _guard = TEST_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        close_oauth_listener();
+        let callback_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let cb_count = callback_count.clone();
+        let port = start_oauth_listener_internal(Some(Box::new(move |_| {
+            cb_count.fetch_add(1, Ordering::SeqCst);
+            respond_oauth(200, vec![], "done".to_string()).expect("respond succeeds");
+        })))
+        .expect("listen succeeds");
+
+        for req in [
+            "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: evil.com\r\n\r\n".to_string(),
+            "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\n\r\n".to_string(),
+            format!(
+                "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
+                port.saturating_add(1)
+            ),
+            format!(
+                "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nHost: localhost:{port}\r\n\r\n"
+            ),
+        ] {
+            let resp = send_raw_request(port, &req);
+            assert!(
+                resp.starts_with("HTTP/1.1 400 Bad Request"),
+                "expected 400 response, got: {resp}"
+            );
+            assert_eq!(callback_count.load(Ordering::SeqCst), 0);
+            assert!(
+                start_oauth_listener().is_err(),
+                "listener must remain active after 400"
+            );
+        }
+
+        // Subsequent valid request with case-insensitive localhost:<port> still succeeds.
+        let valid_resp = send_raw_request(
+            port,
+            &format!(
+                "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: LocalHost:{port}\r\n\r\n"
+            ),
+        );
+        assert!(
+            valid_resp.starts_with("HTTP/1.1 200"),
+            "expected 200 after rejected Host attempts, got: {valid_resp}"
+        );
+        assert_eq!(callback_count.load(Ordering::SeqCst), 1);
+        close_oauth_listener();
+    }
+
+    #[test]
+    fn invalid_callback_query_returns_400_without_consuming_listener() {
+        let _guard = TEST_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        close_oauth_listener();
+        let callback_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let cb_count = callback_count.clone();
+        let port = start_oauth_listener_internal(Some(Box::new(move |_| {
+            cb_count.fetch_add(1, Ordering::SeqCst);
+            respond_oauth(200, vec![], "done".to_string()).expect("respond succeeds");
+        })))
+        .expect("listen succeeds");
+
+        for target in [
+            "/auth/callback",
+            "/auth/callback?code=abc",
+            "/auth/callback?code=abc&state=",
+            "/auth/callback?state=xyz",
+            "/auth/callback?state=xyz&code=",
+            "/auth/callback?state=xyz&error=",
+            "/auth/callback?code=abc&state=xyz&state=dup",
+            "/auth/callback?code=abc&code=dup&state=xyz",
+            "/auth/callback?error=access_denied&error=dup&state=xyz",
+            "/auth/callback?code=abc&state=xyz#frag",
+        ] {
+            let resp = send_raw_request(
+                port,
+                &format!("GET {target} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"),
+            );
+            assert!(
+                resp.starts_with("HTTP/1.1 400 Bad Request"),
+                "expected 400 for {target}, got: {resp}"
+            );
+            assert_eq!(callback_count.load(Ordering::SeqCst), 0);
+            assert!(
+                start_oauth_listener().is_err(),
+                "listener must remain active after invalid query {target}"
+            );
+        }
+
+        // Valid error callback also succeeds.
+        let valid_resp = send_raw_request(
+            port,
+            &format!(
+                "GET /auth/callback?error=access_denied&state=xyz HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"
+            ),
+        );
+        assert!(
+            valid_resp.starts_with("HTTP/1.1 200"),
+            "expected 200 for valid error callback, got: {valid_resp}"
+        );
+        assert_eq!(callback_count.load(Ordering::SeqCst), 1);
+        close_oauth_listener();
+    }
+
+    #[test]
+    fn respond_oauth_includes_default_security_headers() {
+        let _guard = TEST_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        close_oauth_listener();
+        let port = start_oauth_listener_internal(Some(Box::new(|_| {
+            respond_oauth(
+                200,
+                vec![("Content-Type".to_string(), "text/html".to_string())],
+                "<html>ok</html>".to_string(),
+            )
+            .expect("respond succeeds");
+        })))
+        .expect("listen succeeds");
+
+        let resp = send_raw_request(
+            port,
+            &format!(
+                "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"
+            ),
+        );
+        assert!(resp.starts_with("HTTP/1.1 200"), "got: {resp}");
+        assert!(
+            resp.contains(
+                "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\n"
+            ),
+            "missing default CSP header in: {resp}"
+        );
+        assert!(
+            resp.contains("X-Content-Type-Options: nosniff\r\n"),
+            "missing X-Content-Type-Options header in: {resp}"
+        );
+        assert!(
+            resp.contains("Cache-Control: no-store\r\n"),
+            "missing Cache-Control header in: {resp}"
+        );
+        close_oauth_listener();
+
+        // Custom headers already provided by respond_oauth are preserved without duplication.
+        let port2 = start_oauth_listener_internal(Some(Box::new(|_| {
+            respond_oauth(
+                200,
+                vec![(
+                    "content-security-policy".to_string(),
+                    "default-src 'self'".to_string(),
+                )],
+                "ok".to_string(),
+            )
+            .expect("respond succeeds");
+        })))
+        .expect("listen succeeds");
+
+        let resp2 = send_raw_request(
+            port2,
+            &format!(
+                "GET /auth/callback?code=abc&state=xyz HTTP/1.1\r\nHost: localhost:{port2}\r\n\r\n"
+            ),
+        );
+        assert!(resp2.starts_with("HTTP/1.1 200"), "got: {resp2}");
+        assert!(
+            resp2.contains("content-security-policy: default-src 'self'\r\n"),
+            "missing caller CSP header in: {resp2}"
+        );
+        assert!(
+            !resp2.contains("Content-Security-Policy:"),
+            "must not duplicate CSP header in: {resp2}"
+        );
+        assert!(
+            resp2.contains("X-Content-Type-Options: nosniff\r\n"),
+            "missing X-Content-Type-Options header in: {resp2}"
+        );
         close_oauth_listener();
     }
 }
