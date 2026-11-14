@@ -26,13 +26,37 @@ describe("src/worker/headless-worker.ts & photon-wasm.ts", () => {
 		}
 	});
 
-	it("supports PNG chunk operations in the worker Buffer shim", () => {
+	it("supports PNG chunk operations and isBuffer/allocUnsafe in the worker Buffer shim", () => {
 		const chunk = ShimBuffer.alloc(8);
+		assert.equal(ShimBuffer.isBuffer(chunk), true);
+		assert.equal(ShimBuffer.isBuffer(new Uint8Array(4)), false);
+		assert.equal(ShimBuffer.allocUnsafe(4).length, 4);
 		chunk.writeUInt32BE(0x12345678, 0);
 		chunk.write("IDAT", 4, "ascii");
 		const copy = ShimBuffer.alloc(8);
 		chunk.copy(copy);
 		assert.equal(copy.toString("hex"), "1234567849444154");
+	});
+
+	it("falls back to renderSvgViaHost when Resvg fails", async () => {
+		const fakePng = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+		let captured: { svg: string; width: number; height: number } | null = null;
+		const headless = createWorkerHeadless({
+			async renderSvgViaHost(svg, width, height) {
+				captured = { svg, width, height };
+				return new Uint8Array(fakePng);
+			},
+		});
+		const out = await headless.renderSvg("<svg width=\"320\" height=\"180\"><not-valid-xml", {
+			width: 320,
+			height: 180,
+		});
+		assert.deepEqual(captured, {
+			svg: "<svg width=\"320\" height=\"180\"><not-valid-xml",
+			width: 320,
+			height: 180,
+		});
+		assert.equal(out.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
 	});
 	it("rasterizes SVG via @resvg/resvg-wasm into a canonical single-IDAT PNG", async () => {
 		const headless = createWorkerHeadless();

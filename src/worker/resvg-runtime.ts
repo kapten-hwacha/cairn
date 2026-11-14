@@ -27,9 +27,17 @@ export async function ensureResvgWasm(): Promise<void> {
 				import.meta.url,
 			);
 			const res = await fetch(wasmUrl);
+			if (!res.ok) {
+				throw new Error(
+					`Failed to fetch Resvg WASM (${res.status} ${res.statusText})`,
+				);
+			}
 			const bytes = await res.arrayBuffer();
 			await initWasm(bytes);
-		})();
+		})().catch((err) => {
+			wasmInitPromise = null;
+			throw err;
+		});
 	}
 	return wasmInitPromise;
 }
