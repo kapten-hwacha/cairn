@@ -24,5 +24,9 @@ xai-credentials.json*
 
 # Tauri v2 build artifacts
 src-tauri/target/
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/apple/
+src-tauri/gen/apple/*
+!src-tauri/gen/apple/project.yml
+!src-tauri/gen/apple/Sources/
 src-tauri/*.key*
