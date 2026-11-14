@@ -124,6 +124,11 @@ describe("SSRF guard and bounded stream reader (web.ts)", () => {
 		assert.equal(isPrivateOrLoopbackHost("service.localhost"), true);
 		assert.equal(isPrivateOrLoopbackHost("device.local"), true);
 		assert.equal(isPrivateOrLoopbackHost("localhost."), true);
+		assert.equal(isPrivateOrLoopbackHost("127.0.0.1.nip.io"), true);
+		assert.equal(isPrivateOrLoopbackHost("169.254.169.254.sslip.io"), true);
+		assert.equal(isPrivateOrLoopbackHost("app.localtest.me"), true);
+		assert.equal(isPrivateOrLoopbackHost("sub.lvh.me"), true);
+		assert.equal(isPrivateOrLoopbackHost("sub.vcap.me"), true);
 
 		// IPv4 ranges
 		assert.equal(isPrivateOrLoopbackHost("127.0.0.1"), true);
@@ -151,6 +156,9 @@ describe("SSRF guard and bounded stream reader (web.ts)", () => {
 		assert.equal(isPrivateOrLoopbackHost("::ffff:127.0.0.1"), true);
 		assert.equal(isPrivateOrLoopbackHost("::ffff:7f00:1"), true);
 		assert.equal(isPrivateOrLoopbackHost("::ffff:169.254.169.254"), true);
+		assert.equal(isPrivateOrLoopbackHost("::7f00:1"), true);
+		assert.equal(isPrivateOrLoopbackHost("64:ff9b::7f00:1"), true);
+		assert.equal(isPrivateOrLoopbackHost("fd00:ec2::254"), true);
 
 		// Public hosts allowed
 		assert.equal(isPrivateOrLoopbackHost("example.com"), false);

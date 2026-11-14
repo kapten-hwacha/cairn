@@ -67,10 +67,12 @@ describe("Tauri HostBridge", () => {
 		const res = await bridge.nativeFetch("https://api.openai.com/v1/models", {
 			method: "GET",
 			headers: { authorization: "Bearer invalid" },
+			redirect: "manual",
 		});
 		assert.equal(res.status, 401);
 		assert.equal(await res.text(), '{"e":1}');
 		assert.equal(res.headers.get("content-type"), "application/json");
+		assert.equal((invoked[0]?.[1] as { req: { redirect?: string } })?.req?.redirect, "manual");
 	});
 
 	it("readExternalFile invokes lh_fs_read_external and returns Uint8Array", async () => {

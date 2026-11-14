@@ -342,6 +342,7 @@ export function createTauriHostBridge(
 					method,
 					headers,
 					bodyBase64,
+					...(init?.redirect ? { redirect: init.redirect } : {}),
 				},
 			});
 

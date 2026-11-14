@@ -65,8 +65,20 @@ export function isPrivateOrLoopbackHost(hostname: string): boolean {
 		host === "localhost.localdomain" ||
 		host === "metadata.google.internal" ||
 		host === "0.0.0.0" ||
+		host === "localtest.me" ||
+		host === "lvh.me" ||
+		host === "vcap.me" ||
+		host === "nip.io" ||
+		host === "sslip.io" ||
+		host === "xip.io" ||
 		host.endsWith(".localhost") ||
-		host.endsWith(".local")
+		host.endsWith(".local") ||
+		host.endsWith(".localtest.me") ||
+		host.endsWith(".lvh.me") ||
+		host.endsWith(".vcap.me") ||
+		host.endsWith(".nip.io") ||
+		host.endsWith(".sslip.io") ||
+		host.endsWith(".xip.io")
 	) {
 		return true;
 	}
@@ -119,7 +131,7 @@ export function isPrivateOrLoopbackHost(hostname: string): boolean {
 		) {
 			return true;
 		}
-		if (host.startsWith("fc") || host.startsWith("fd")) {
+		if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("64:ff9b:")) {
 			return true;
 		}
 		if (
@@ -136,6 +148,23 @@ export function isPrivateOrLoopbackHost(hostname: string): boolean {
 				return isPrivateOrLoopbackHost(mapped);
 			}
 			const hexMatch = mapped.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+			if (hexMatch) {
+				const n1 = parseInt(hexMatch[1]!, 16);
+				const n2 = parseInt(hexMatch[2]!, 16);
+				const a = (n1 >> 8) & 0xff;
+				const b = n1 & 0xff;
+				const c = (n2 >> 8) & 0xff;
+				const d = n2 & 0xff;
+				return isPrivateOrLoopbackHost(`${a}.${b}.${c}.${d}`);
+			}
+			return true;
+		}
+		if (host.startsWith("::")) {
+			const compat = host.slice(2);
+			if (/^\d+\.\d+\.\d+\.\d+$/.test(compat)) {
+				return isPrivateOrLoopbackHost(compat);
+			}
+			const hexMatch = compat.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
 			if (hexMatch) {
 				const n1 = parseInt(hexMatch[1]!, 16);
 				const n2 = parseInt(hexMatch[2]!, 16);
@@ -259,12 +288,13 @@ function truncate(text: string): string {
 /** Jina Reader fallback for JS-rendered pages (no deps — plain fetch). */
 async function fetchViaJina(url: string): Promise<string | null> {
 	try {
-		const res = await fetch(`https://r.jina.ai/${url}`, {
+		const res = await fetchPublicUrl(`https://r.jina.ai/${url}`, {
 			headers: { Accept: "text/markdown", "X-No-Cache": "true" },
 			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 		});
 		if (!res.ok) return null;
-		const content = await res.text();
+		const bytes = await readBoundedBytes(res, MAX_FETCH_BYTES);
+		const content = new TextDecoder().decode(bytes);
 		const marker = "Markdown Content:";
 		const start = content.indexOf(marker);
 		if (start < 0) return null;
