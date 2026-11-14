@@ -1,7 +1,7 @@
 /**
  * API route handler for Quaderno Companion round-trip PDF bridge.
  * GET /api/quaderno -> returns daemon and device connection status.
- * POST /api/quaderno -> executes sendProblem, exportSheet, or pullPdf actions.
+ * POST /api/quaderno -> executes sendProblem or pullPdf actions.
  */
 
 import { getQuadernoStatus, executeQuadernoAction } from "@/src/server";
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 		!body ||
 		typeof body !== "object" ||
 		!("action" in body) ||
-		!["sendProblem", "exportSheet", "pullPdf"].includes((body as { action?: string }).action ?? "")
+		!["sendProblem", "pullPdf"].includes((body as { action?: string }).action ?? "")
 	) {
 		return Response.json(
 			{ ok: false, mode: "filesystem", message: "Invalid or missing action in request body" },

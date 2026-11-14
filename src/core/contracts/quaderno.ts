@@ -37,13 +37,6 @@ export type QuadernoActionRequest =
 			markdown: string;
 	  }
 	| {
-			action: "exportSheet";
-			chatId?: string;
-			docTitle?: string;
-			title: string;
-			markdown: string;
-	  }
-	| {
 			action: "pullPdf";
 			docTitle?: string | null;
 			filePath?: string | null;

@@ -1438,30 +1438,6 @@ export function Chat({
 							onClick={onSwitchToPractice}
 						/>
 					)}
-					<button
-						type="button"
-						data-testid="quaderno-export-sheet-button"
-						onClick={async (e) => {
-							blurAfterPointerClick(e);
-							try {
-								await fetch("/api/quaderno", {
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({
-										action: "exportSheet",
-										chatId,
-										title: titleText || "Study Session",
-										markdown: "# Study Session — Cold Compression Sheet\n\nReconstruct the core claims and derivations from this session on your Quaderno.",
-									}),
-								});
-							} catch (err) {
-								console.error("quaderno export failed:", err);
-							}
-						}}
-						className="lh-no-drag flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-border/80 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-					>
-						Quaderno
-					</button>
 				</TopBar>
 
 				<SessionFind scopeRef={sessionFindScopeRef} scrollContextRef={scrollContextRef} />

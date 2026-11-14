@@ -475,7 +475,7 @@ export async function getQuadernoStatus(deps?: {
 }
 
 /**
- * Executes a Quaderno round-trip bridge action (`sendProblem`, `exportSheet`, or `pullPdf`).
+ * Executes a Quaderno round-trip bridge action (`sendProblem` or `pullPdf`).
  */
 export async function executeQuadernoAction(
 	req: QuadernoActionRequest,
@@ -484,7 +484,7 @@ export async function executeQuadernoAction(
 	const config = deps?.config ?? (await resolveQuadernoConfig());
 	const fetchImpl = deps?.fetchImpl ?? fetch;
 
-	if (req.action === "sendProblem" || req.action === "exportSheet") {
+	if (req.action === "sendProblem") {
 		const rawStem = req.docTitle?.trim().replace(/\.pdf$/i, "");
 		const docTitle =
 			rawStem && !rawStem.includes("/") && !rawStem.includes("\\") && !rawStem.includes("..")
@@ -492,7 +492,7 @@ export async function executeQuadernoAction(
 				: buildQuadernoDocTitle({
 						title: req.title,
 						chatId: req.chatId,
-						toolCallId: "toolCallId" in req ? req.toolCallId : undefined,
+						toolCallId: req.toolCallId,
 					});
 
 		let localPdfPath: string;
