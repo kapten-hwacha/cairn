@@ -373,4 +373,15 @@ describe("Tauri HostBridge", () => {
 		assert.deepEqual(pdfs, ["a.pdf", "b.pdf"]);
 		assert.deepEqual(calls[1], ["lh_quaderno_list_pdfs", undefined]);
 	});
+
+	it("isAllowedWorkerTauriCommand only permits allowlisted worker bridge commands", async () => {
+		const { isAllowedWorkerTauriCommand } = await import("../../src/client/worker-client.ts");
+		assert.equal(isAllowedWorkerTauriCommand("lh_runtime_init"), true);
+		assert.equal(isAllowedWorkerTauriCommand("lh_fs_read_external"), true);
+		assert.equal(isAllowedWorkerTauriCommand("lh_exec_command"), true);
+		assert.equal(isAllowedWorkerTauriCommand("plugin:shell|execute"), false);
+		assert.equal(isAllowedWorkerTauriCommand("lh_expand_window"), false);
+		assert.equal(isAllowedWorkerTauriCommand(""), false);
+		assert.equal(isAllowedWorkerTauriCommand(null), false);
+	});
 });

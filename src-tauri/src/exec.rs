@@ -51,6 +51,15 @@ pub fn validate_allowed_binary(cmd: &str) -> Result<PathBuf, String> {
                 canonical.display()
             ));
         }
+        let canonical_name = canonical
+            .file_name()
+            .and_then(|f| f.to_str())
+            .ok_or_else(|| "Invalid canonical binary name".to_string())?;
+        if !ALLOWED_NAMES.contains(&canonical_name) {
+            return Err(format!(
+                "Canonical binary '{canonical_name}' is not in the allowed list"
+            ));
+        }
         return Ok(canonical);
     }
 
@@ -77,7 +86,11 @@ pub fn validate_allowed_binary(cmd: &str) -> Result<PathBuf, String> {
             if candidate.is_file() {
                 if let Ok(canonical) = std::fs::canonicalize(&candidate) {
                     if canonical.is_file() {
-                        return Ok(canonical);
+                        let canonical_name =
+                            canonical.file_name().and_then(|f| f.to_str()).unwrap_or("");
+                        if ALLOWED_NAMES.contains(&canonical_name) {
+                            return Ok(canonical);
+                        }
                     }
                 }
             }
@@ -89,6 +102,44 @@ pub fn validate_allowed_binary(cmd: &str) -> Result<PathBuf, String> {
     }
 
     Err(format!("Relative paths are not allowed: '{cmd}'"))
+}
+
+pub fn validate_allowed_binary_outside_dirs(
+    cmd: &str,
+    forbidden_dirs: &[PathBuf],
+) -> Result<PathBuf, String> {
+    let canonical = validate_allowed_binary(cmd)?;
+    for dir in forbidden_dirs {
+        let check_dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.clone());
+        if canonical.starts_with(&check_dir) {
+            return Err(format!(
+                "Refusing to execute binary inside application data directory: '{}'",
+                canonical.display()
+            ));
+        }
+    }
+    Ok(canonical)
+}
+
+pub fn is_safe_exec_env_key(key: &str) -> bool {
+    if key.is_empty() || key.contains('=') || key.contains('\0') {
+        return false;
+    }
+    let upper = key.to_ascii_uppercase();
+    if upper.starts_with("LD_") || upper.starts_with("DYLD_") {
+        return false;
+    }
+    !matches!(
+        upper.as_str(),
+        "NODE_OPTIONS"
+            | "ELECTRON_RUN_AS_NODE"
+            | "BASH_ENV"
+            | "ENV"
+            | "PYTHONSTARTUP"
+            | "PYTHONPATH"
+            | "RUBYOPT"
+            | "PERL5OPT"
+    )
 }
 
 #[cfg(not(target_os = "ios"))]
@@ -109,7 +160,16 @@ pub mod desktop {
         cmd: String,
         args: Vec<String>,
     ) -> Result<u32, String> {
-        let bin = validate_allowed_binary(&cmd)?;
+        lh_spawn_daemon_checked(state, cmd, args, &[]).await
+    }
+
+    pub async fn lh_spawn_daemon_checked(
+        state: &ExecManager,
+        cmd: String,
+        args: Vec<String>,
+        forbidden_dirs: &[PathBuf],
+    ) -> Result<u32, String> {
+        let bin = validate_allowed_binary_outside_dirs(&cmd, forbidden_dirs)?;
         let mut command = Command::new(&bin);
         command.args(&args);
         command.stdin(Stdio::null());
@@ -157,7 +217,17 @@ pub mod desktop {
         env: Option<Vec<(String, String)>>,
         timeout_ms: Option<u64>,
     ) -> Result<ExecResult, String> {
-        let bin = validate_allowed_binary(&cmd)?;
+        lh_exec_command_checked(cmd, args, env, timeout_ms, &[]).await
+    }
+
+    pub async fn lh_exec_command_checked(
+        cmd: String,
+        args: Vec<String>,
+        env: Option<Vec<(String, String)>>,
+        timeout_ms: Option<u64>,
+        forbidden_dirs: &[PathBuf],
+    ) -> Result<ExecResult, String> {
+        let bin = validate_allowed_binary_outside_dirs(&cmd, forbidden_dirs)?;
         let mut command = tokio::process::Command::new(&bin);
         command.kill_on_drop(true);
         command.args(args);
@@ -166,6 +236,9 @@ pub mod desktop {
 
         if let Some(env_vars) = env {
             for (k, v) in env_vars {
+                if !is_safe_exec_env_key(&k) {
+                    return Err(format!("Forbidden environment variable: {k}"));
+                }
                 command.env(k, v);
             }
         }
@@ -187,18 +260,20 @@ pub mod desktop {
 
 #[tauri::command]
 pub async fn lh_spawn_daemon(
+    app: tauri::AppHandle,
     state: tauri::State<'_, ExecManager>,
     cmd: String,
     args: Vec<String>,
 ) -> Result<u32, String> {
     #[cfg(target_os = "ios")]
     {
-        let _ = (state, cmd, args);
+        let _ = (app, state, cmd, args);
         Err("Subprocess execution is not supported on iOS".into())
     }
     #[cfg(not(target_os = "ios"))]
     {
-        desktop::lh_spawn_daemon(&state, cmd, args).await
+        let (data_dir, _, user_data_dir) = crate::fs_bridge::resolve_app_dirs(&app);
+        desktop::lh_spawn_daemon_checked(&state, cmd, args, &[data_dir, user_data_dir]).await
     }
 }
 
@@ -222,6 +297,7 @@ pub async fn lh_kill_process(state: tauri::State<'_, ExecManager>, pid: u32) -> 
 
 #[tauri::command]
 pub async fn lh_exec_command(
+    app: tauri::AppHandle,
     cmd: String,
     args: Vec<String>,
     env: Option<Vec<(String, String)>>,
@@ -229,12 +305,14 @@ pub async fn lh_exec_command(
 ) -> Result<ExecResult, String> {
     #[cfg(target_os = "ios")]
     {
-        let _ = (cmd, args, env, timeout_ms);
+        let _ = (app, cmd, args, env, timeout_ms);
         Err("Subprocess execution is not supported on iOS".into())
     }
     #[cfg(not(target_os = "ios"))]
     {
-        desktop::lh_exec_command(cmd, args, env, timeout_ms).await
+        let (data_dir, _, user_data_dir) = crate::fs_bridge::resolve_app_dirs(&app);
+        desktop::lh_exec_command_checked(cmd, args, env, timeout_ms, &[data_dir, user_data_dir])
+            .await
     }
 }
 
@@ -328,5 +406,61 @@ mod tests {
         assert!(kill_again.is_err());
 
         let _ = std::fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_validate_allowed_binary_rejects_symlink_to_disallowed_target_and_forbidden_dirs() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("lh_symlink_exec_test_{}", std::process::id()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let real_sh = temp_dir.join("not_allowed");
+        std::fs::write(&real_sh, b"#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&real_sh, std::fs::Permissions::from_mode(0o755)).unwrap();
+            let symlink_claude = temp_dir.join("claude");
+            std::os::unix::fs::symlink(&real_sh, &symlink_claude).unwrap();
+            let res = validate_allowed_binary(symlink_claude.to_str().unwrap());
+            assert!(res.is_err(), "symlink to non-allowed binary must fail");
+        }
+
+        let allowed_in_forbidden = temp_dir.join("cliproxyapi");
+        std::fs::write(&allowed_in_forbidden, b"#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                &allowed_in_forbidden,
+                std::fs::Permissions::from_mode(0o755),
+            )
+            .unwrap();
+        }
+        let forbidden_res = validate_allowed_binary_outside_dirs(
+            allowed_in_forbidden.to_str().unwrap(),
+            std::slice::from_ref(&temp_dir),
+        );
+        assert!(
+            forbidden_res.is_err(),
+            "binary inside forbidden app dir must fail"
+        );
+
+        let _ = std::fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_is_safe_exec_env_key() {
+        assert!(is_safe_exec_env_key("PATH"));
+        assert!(is_safe_exec_env_key("HOME"));
+        assert!(is_safe_exec_env_key("ANTHROPIC_API_KEY"));
+        assert!(!is_safe_exec_env_key(""));
+        assert!(!is_safe_exec_env_key("FOO=BAR"));
+        assert!(!is_safe_exec_env_key("LD_PRELOAD"));
+        assert!(!is_safe_exec_env_key("ld_library_path"));
+        assert!(!is_safe_exec_env_key("DYLD_INSERT_LIBRARIES"));
+        assert!(!is_safe_exec_env_key("NODE_OPTIONS"));
+        assert!(!is_safe_exec_env_key("ELECTRON_RUN_AS_NODE"));
+        assert!(!is_safe_exec_env_key("BASH_ENV"));
     }
 }

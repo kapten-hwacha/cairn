@@ -596,7 +596,12 @@ pub async fn lh_quaderno_write_pdf(
         .and_then(|n| n.to_str())
         .ok_or_else(|| "Invalid filename".to_string())?;
 
-    if name.is_empty() || name.contains("..") || name.contains('/') || name.contains('\\') {
+    if name.is_empty()
+        || name.contains("..")
+        || name.contains('/')
+        || name.contains('\\')
+        || !name.to_ascii_lowercase().ends_with(".pdf")
+    {
         return Err(format!("Invalid filename: {filename}"));
     }
 
@@ -606,6 +611,12 @@ pub async fn lh_quaderno_write_pdf(
         .map_err(|e| format!("Failed to create quaderno directory: {e}"))?;
 
     let target = quaderno_dir.join(name);
+    if target
+        .symlink_metadata()
+        .is_ok_and(|m| m.file_type().is_symlink())
+    {
+        return Err("Refusing to write to symlink in quaderno directory".to_string());
+    }
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(data_base64.as_bytes())
         .map_err(|e| format!("Base64 decode failed: {e}"))?;
@@ -646,6 +657,10 @@ pub async fn lh_debug_write(
     line: String,
     append: Option<bool>,
 ) -> Result<(), String> {
+    const MAX_DEBUG_WRITE_BYTES: usize = 1024 * 1024;
+    if line.len() > MAX_DEBUG_WRITE_BYTES {
+        return Err("Debug write payload exceeds maximum size".to_string());
+    }
     let p = Path::new(&rel_path);
     for comp in p.components() {
         if matches!(
@@ -658,9 +673,24 @@ pub async fn lh_debug_write(
         }
     }
 
+    let ext = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    if !matches!(ext.as_str(), "log" | "json" | "jsonl" | "txt" | "md") {
+        return Err(format!("Disallowed debug file extension: {rel_path}"));
+    }
+
     let (_, _, user_data_dir) = resolve_app_dirs(&app);
     let debug_dir = user_data_dir.join("debug");
     let target = debug_dir.join(p);
+    if target
+        .symlink_metadata()
+        .is_ok_and(|m| m.file_type().is_symlink())
+    {
+        return Err("Refusing to write to symlink in debug directory".to_string());
+    }
 
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("Failed to create debug dir: {e}"))?;

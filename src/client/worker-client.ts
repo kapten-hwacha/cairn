@@ -264,6 +264,113 @@ export function getWorker(): Worker | null {
 	return activeWorker;
 }
 
+export const ALLOWED_WORKER_TAURI_COMMANDS: ReadonlySet<string> = new Set([
+	"lh_runtime_init",
+	"lh_list_chats",
+	"lh_load_chat",
+	"lh_save_chat",
+	"lh_delete_chat",
+	"lh_search_chats",
+	"lh_save_image_snapshot",
+	"lh_save_chat_image",
+	"lh_get_image_snapshot",
+	"lh_list_practice_records",
+	"lh_graph_append_node",
+	"lh_graph_read_nodes",
+	"lh_graph_append_chain",
+	"lh_graph_read_chains",
+	"lh_graph_append_checkpoint",
+	"lh_graph_read_checkpoints",
+	"lh_graph_append_coverage",
+	"lh_graph_read_coverage",
+	"lh_graph_append_regroup",
+	"lh_graph_read_regroups",
+	"lh_graph_upsert_source",
+	"lh_graph_save_source",
+	"lh_graph_read_sources",
+	"lh_graph_delete_sources",
+	"lh_graph_delete_source",
+	"lh_graph_append_source_usage",
+	"lh_graph_read_positions",
+	"lh_graph_write_positions",
+	"lh_graph_save_positions",
+	"lh_graph_rewrite_ledgers",
+	"lh_read_graph",
+	"lh_graph_load_snapshot",
+	"lh_save_graph",
+	"lh_graph_revision",
+	"lh_get_graph_revision",
+	"lh_search_nodes",
+	"lh_read_practice_history",
+	"lh_read_fsrs_cards",
+	"lh_list_fsrs_cards",
+	"lh_upsert_fsrs_cards",
+	"lh_save_fsrs_cards",
+	"lh_recompute_fsrs_cards",
+	"lh_graph_clear_all",
+	"lh_append_graph_events",
+	"lh_read_graph_events",
+	"lh_job_save",
+	"lh_save_job",
+	"lh_job_get",
+	"lh_get_job",
+	"lh_job_list",
+	"lh_list_jobs",
+	"lh_job_find_by_tool_call",
+	"lh_job_delete_for_chat",
+	"lh_delete_job",
+	"lh_kv_get",
+	"lh_kv_set",
+	"lh_study_read_intervals",
+	"lh_study_list_intervals",
+	"lh_study_append_intervals",
+	"lh_study_append_interval",
+	"lh_list_study_materials",
+	"lh_save_study_materials",
+	"lh_prompt_override_list",
+	"lh_prompts_list_overrides",
+	"lh_list_prompt_overrides",
+	"lh_prompt_override_read",
+	"lh_prompts_get_override",
+	"lh_get_prompt_override",
+	"lh_prompt_override_write",
+	"lh_prompts_set_override",
+	"lh_set_prompt_override",
+	"lh_prompt_override_delete",
+	"lh_prompts_delete_override",
+	"lh_auth_read",
+	"lh_auth_write",
+	"lh_get_host_dirs",
+	"lh_fs_hydrate",
+	"lh_fs_sync",
+	"lh_fs_read_external",
+	"lh_fs_stat_external",
+	"lh_fs_list_external_dir",
+	"lh_fs_walk_external",
+	"lh_quaderno_write_pdf",
+	"lh_quaderno_list_pdfs",
+	"lh_debug_write",
+	"lh_chatgpt_control",
+	"lh_chatgpt_models",
+	"lh_chatgpt_snapshot",
+	"lh_chatgpt_stream_start",
+	"lh_chatgpt_stream_prepare",
+	"lh_chatgpt_stream_cancel",
+	"lh_http_fetch",
+	"lh_open_external",
+	"lh_oauth_listen_start",
+	"lh_oauth_listen_close",
+	"lh_oauth_respond",
+	"lh_exec_command",
+	"lh_spawn_daemon",
+	"lh_kill_daemon",
+	"lh_kill_process",
+]);
+
+export function isAllowedWorkerTauriCommand(cmd: unknown): cmd is string {
+	return typeof cmd === "string" && ALLOWED_WORKER_TAURI_COMMANDS.has(cmd);
+}
+
 export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } {
 	if (activeWorker && workerFetch) {
 		return { worker: activeWorker, portFetch: workerFetch };
@@ -308,6 +415,14 @@ export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } 
 		worker.addEventListener("message", async (event: MessageEvent) => {
 			if (event.data?.type === "lh:tauri-invoke") {
 				const { id, cmd, args } = event.data;
+				if (!isAllowedWorkerTauriCommand(cmd)) {
+					worker.postMessage({
+						type: "lh:tauri-invoke-result",
+						id,
+						error: `Disallowed worker Tauri command: ${String(cmd)}`,
+					});
+					return;
+				}
 				try {
 					const result = await tauri.invoke(cmd, args);
 					worker.postMessage({ type: "lh:tauri-invoke-result", id, result });
