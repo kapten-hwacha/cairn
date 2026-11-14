@@ -136,6 +136,24 @@ export class ShimBuffer extends Uint8Array {
 			((this[offset + 2]! << 16) | (this[offset + 1]! << 8) | this[offset]!)
 		);
 	}
+
+	writeUInt32BE(value: number, offset: number): number {
+		new DataView(this.buffer, this.byteOffset, this.byteLength).setUint32(offset, value);
+		return offset + 4;
+	}
+
+	write(value: string, offset = 0, encoding = "utf8"): number {
+		const bytes = ShimBuffer.from(value, encoding);
+		const count = Math.min(bytes.length, this.length - offset);
+		this.set(bytes.subarray(0, count), offset);
+		return count;
+	}
+
+	copy(target: Uint8Array, targetStart = 0): number {
+		const count = Math.min(this.length, target.length - targetStart);
+		target.set(this.subarray(0, count), targetStart);
+		return count;
+	}
 }
 
 export function toBuffer(bytes: Uint8Array): Buffer {

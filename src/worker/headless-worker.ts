@@ -1,4 +1,7 @@
-import { initWasm, Resvg } from "@resvg/resvg-wasm";
+import { ensureResvgWasm } from "./resvg-runtime.ts";
+import { verifyPlot3DViaHost } from "./plot3d-verify.ts";
+import { Resvg } from "@resvg/resvg-wasm";
+import { Buffer } from "node:buffer";
 import {
 	type DemoRunResult,
 	type HeadlessApi,
@@ -10,37 +13,12 @@ import {
 	type RunDemoOptions,
 } from "../agent/subagents/headless.ts";
 
-let wasmInitPromise: Promise<void> | null = null;
-
-async function ensureResvgWasm(): Promise<void> {
-	if (!wasmInitPromise) {
-		wasmInitPromise = (async () => {
-			try {
-				if (typeof process !== "undefined" && process.versions?.node) {
-					const fs = await import("node:fs");
-					const path = await import("node:path");
-					const wasmPath = path.resolve(process.cwd(), "node_modules/@resvg/resvg-wasm/index_bg.wasm");
-					if (fs.existsSync(wasmPath)) {
-						const wasmBytes = fs.readFileSync(wasmPath);
-						await initWasm(wasmBytes);
-						return;
-					}
-				}
-			} catch {
-				// Fall back to fetch in browser/worker
-			}
-
-			const wasmUrl = new URL("@resvg/resvg-wasm/index_bg.wasm", import.meta.url);
-			const res = await fetch(wasmUrl);
-			const bytes = await res.arrayBuffer();
-			await initWasm(bytes);
-		})();
-	}
-	return wasmInitPromise;
-}
-
-function svgViewport(svg: string, opts: RenderSvgOptions): { width: number; height: number } {
-	if (opts.width && opts.height) return { width: opts.width, height: opts.height };
+function svgViewport(
+	svg: string,
+	opts: RenderSvgOptions,
+): { width: number; height: number } {
+	if (opts.width && opts.height)
+		return { width: opts.width, height: opts.height };
 	const width = Number(svg.match(/\bwidth\s*=\s*"?(\d+(?:\.\d+)?)/)?.[1]);
 	const height = Number(svg.match(/\bheight\s*=\s*"?(\d+(?:\.\d+)?)/)?.[1]);
 	return {
@@ -49,7 +27,10 @@ function svgViewport(svg: string, opts: RenderSvgOptions): { width: number; heig
 	};
 }
 
-async function renderSvg(svg: string, opts: RenderSvgOptions = {}): Promise<Buffer> {
+async function renderSvg(
+	svg: string,
+	opts: RenderSvgOptions = {},
+): Promise<Buffer> {
 	const { width, height } = svgViewport(svg, opts);
 	try {
 		await ensureResvgWasm();
@@ -61,7 +42,11 @@ async function renderSvg(svg: string, opts: RenderSvgOptions = {}): Promise<Buff
 		const pngBytes = rendered.asPng();
 		return providerSafePng(Buffer.from(pngBytes));
 	} catch (resvgErr) {
-		if (typeof OffscreenCanvas !== "undefined" && typeof createImageBitmap !== "undefined" && typeof Blob !== "undefined") {
+		if (
+			typeof OffscreenCanvas !== "undefined" &&
+			typeof createImageBitmap !== "undefined" &&
+			typeof Blob !== "undefined"
+		) {
 			try {
 				const blob = new Blob([svg], { type: "image/svg+xml" });
 				const img = await createImageBitmap(blob);
@@ -76,7 +61,9 @@ async function renderSvg(svg: string, opts: RenderSvgOptions = {}): Promise<Buff
 					return providerSafePng(Buffer.from(arr));
 				}
 			} catch (canvasErr) {
-				throw new Error(`Failed to render SVG with Resvg (${String(resvgErr)}) and OffscreenCanvas (${String(canvasErr)})`);
+				throw new Error(
+					`Failed to render SVG with Resvg (${String(resvgErr)}) and OffscreenCanvas (${String(canvasErr)})`,
+				);
 			}
 		}
 		throw resvgErr;
@@ -87,7 +74,10 @@ async function renderPdfPages(
 	pdfPath: string,
 	pages: number[],
 	opts: RenderPdfOptions = {},
-	createCanvas2D?: (width: number, height: number) => {
+	createCanvas2D?: (
+		width: number,
+		height: number,
+	) => {
 		canvas: unknown;
 		context: unknown;
 		toPng(): Promise<Uint8Array>;
@@ -115,7 +105,11 @@ async function renderPdfPages(
 	}
 
 	const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-	const loadingTask = pdfjs.getDocument({ data, isEvalSupported: false, verbosity: 0 } as unknown as Parameters<typeof pdfjs.getDocument>[0]);
+	const loadingTask = pdfjs.getDocument({
+		data,
+		isEvalSupported: false,
+		verbosity: 0,
+	} as unknown as Parameters<typeof pdfjs.getDocument>[0]);
 	const doc = await loadingTask.promise;
 
 	try {
@@ -129,11 +123,13 @@ async function renderPdfPages(
 
 			if (createCanvas2D) {
 				const c = createCanvas2D(geometry.width, geometry.height);
-				await (pg.render({
-					canvasContext: c.context as unknown as CanvasRenderingContext2D,
-					canvas: c.canvas as unknown as HTMLCanvasElement,
-					viewport: vp,
-				}) as unknown as { promise: Promise<void> }).promise;
+				await (
+					pg.render({
+						canvasContext: c.context as unknown as CanvasRenderingContext2D,
+						canvas: c.canvas as unknown as HTMLCanvasElement,
+						viewport: vp,
+					}) as unknown as { promise: Promise<void> }
+				).promise;
 				const raw = await c.toPng();
 				out.push({
 					page: pageNo,
@@ -142,11 +138,13 @@ async function renderPdfPages(
 			} else if (typeof OffscreenCanvas !== "undefined") {
 				const canvas = new OffscreenCanvas(geometry.width, geometry.height);
 				const ctx = canvas.getContext("2d");
-				await (pg.render({
-					canvasContext: ctx as unknown as CanvasRenderingContext2D,
-					canvas: canvas as unknown as HTMLCanvasElement,
-					viewport: vp,
-				}) as unknown as { promise: Promise<void> }).promise;
+				await (
+					pg.render({
+						canvasContext: ctx as unknown as CanvasRenderingContext2D,
+						canvas: canvas as unknown as HTMLCanvasElement,
+						viewport: vp,
+					}) as unknown as { promise: Promise<void> }
+				).promise;
 				const blob = await canvas.convertToBlob({ type: "image/png" });
 				const raw = new Uint8Array(await blob.arrayBuffer());
 				out.push({
@@ -163,8 +161,16 @@ async function renderPdfPages(
 	}
 }
 
-export function buildDemoVerifySrcDoc(html: string, requestId: string, settleMs: number, probe?: string): string {
-	const safeSettleMs = typeof settleMs === "number" && Number.isFinite(settleMs) ? Math.max(0, Math.min(30_000, Math.floor(settleMs))) : 3000;
+export function buildDemoVerifySrcDoc(
+	html: string,
+	requestId: string,
+	settleMs: number,
+	probe?: string,
+): string {
+	const safeSettleMs =
+		typeof settleMs === "number" && Number.isFinite(settleMs)
+			? Math.max(0, Math.min(30_000, Math.floor(settleMs)))
+			: 3000;
 	const probeExpr = probe ? JSON.stringify(probe) : "null";
 	const script = `<script>
 (function() {
@@ -249,21 +255,50 @@ export function buildDemoVerifySrcDoc(html: string, requestId: string, settleMs:
 }
 
 export function createWorkerHeadless(opts?: {
-	runDemoViaHost?: (html: string, opts?: RunDemoOptions) => Promise<DemoRunResult>;
-	createCanvas2D?: (width: number, height: number) => {
+	verifyPlot3DViaHost?: HeadlessApi["verifyPlot3D"];
+	runDemoViaHost?: (
+		html: string,
+		opts?: RunDemoOptions,
+	) => Promise<DemoRunResult>;
+	createCanvas2D?: (
+		width: number,
+		height: number,
+	) => {
 		canvas: unknown;
 		context: unknown;
 		toPng(): Promise<Uint8Array>;
 	};
 }): HeadlessApi {
 	return {
+		verifyPlot3D(request, options) {
+			return (opts?.verifyPlot3DViaHost ?? verifyPlot3DViaHost)(
+				request,
+				options,
+			);
+		},
+		async rasterizeSvgPixels(svg, options) {
+			await ensureResvgWasm();
+			const image = new Resvg(svg, {
+				font: { loadSystemFonts: false },
+			}).render();
+			if (image.width !== options.width || image.height !== options.height)
+				throw new Error("SVG pixel dimensions mismatch");
+			return {
+				width: image.width,
+				height: image.height,
+				rgba: new Uint8Array(image.pixels),
+			};
+		},
 		available() {
 			return true;
 		},
 		unavailableReason() {
 			return null;
 		},
-		async runDemo(html: string, runOpts?: RunDemoOptions): Promise<DemoRunResult> {
+		async runDemo(
+			html: string,
+			runOpts?: RunDemoOptions,
+		): Promise<DemoRunResult> {
 			if (opts?.runDemoViaHost) {
 				return opts.runDemoViaHost(html, runOpts);
 			}
@@ -276,7 +311,10 @@ export function createWorkerHeadless(opts?: {
 				let timer: ReturnType<typeof setTimeout> | undefined;
 
 				const handler = (event: MessageEvent) => {
-					if (event.data?.type === "lh:demo-probe-done" && event.data?.requestId === requestId) {
+					if (
+						event.data?.type === "lh:demo-probe-done" &&
+						event.data?.requestId === requestId
+					) {
 						if (timer) clearTimeout(timer);
 						if (typeof self !== "undefined" && self.removeEventListener) {
 							self.removeEventListener("message", handler);
@@ -303,7 +341,10 @@ export function createWorkerHeadless(opts?: {
 							ok: false,
 						});
 					}, 35000);
-					if (typeof timer === "object" && typeof (timer as { unref?: () => void }).unref === "function") {
+					if (
+						typeof timer === "object" &&
+						typeof (timer as { unref?: () => void }).unref === "function"
+					) {
 						(timer as { unref: () => void }).unref();
 					}
 
@@ -328,7 +369,11 @@ export function createWorkerHeadless(opts?: {
 		renderSvg(svg: string, renderOpts?: RenderSvgOptions): Promise<Buffer> {
 			return renderSvg(svg, renderOpts);
 		},
-		renderPdfPages(pdfPath: string, pages: number[], renderOpts?: RenderPdfOptions): Promise<RenderedPdfPage[]> {
+		renderPdfPages(
+			pdfPath: string,
+			pages: number[],
+			renderOpts?: RenderPdfOptions,
+		): Promise<RenderedPdfPage[]> {
 			return renderPdfPages(pdfPath, pages, renderOpts, opts?.createCanvas2D);
 		},
 	};

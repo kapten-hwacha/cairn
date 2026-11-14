@@ -4,10 +4,36 @@ import { describe, it } from "node:test";
 import { createCanvas } from "@napi-rs/canvas";
 import { buildDemoVerifySrcDoc, createWorkerHeadless } from "../src/worker/headless-worker.ts";
 import { loadPhotonWasm, PhotonImage, SamplingFilter, resize } from "../src/worker/shims/photon-wasm.ts";
+import { ShimBuffer } from "../src/worker/shims/crypto.ts";
+import { processImage } from "../src/agent/image-processing/index.ts";
 
 const PDF_FIXTURE = path.resolve("tests/fixtures/sample-3page.pdf");
 
 describe("src/worker/headless-worker.ts & photon-wasm.ts", () => {
+	it("renders and prepares an SVG without a global Buffer", async () => {
+		const original = globalThis.Buffer;
+		try {
+			// Initialize WASM before hiding Node's global, which its loader may use.
+			const headless = createWorkerHeadless();
+			const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60"/></svg>';
+			await headless.renderSvg(svg);
+			(globalThis as { Buffer?: typeof Buffer }).Buffer = undefined;
+			const png = await headless.renderSvg(svg);
+			const image = await processImage(png, "image/png", { autoResizeImages: false });
+			assert.equal(image.ok, true);
+		} finally {
+			globalThis.Buffer = original;
+		}
+	});
+
+	it("supports PNG chunk operations in the worker Buffer shim", () => {
+		const chunk = ShimBuffer.alloc(8);
+		chunk.writeUInt32BE(0x12345678, 0);
+		chunk.write("IDAT", 4, "ascii");
+		const copy = ShimBuffer.alloc(8);
+		chunk.copy(copy);
+		assert.equal(copy.toString("hex"), "1234567849444154");
+	});
 	it("rasterizes SVG via @resvg/resvg-wasm into a canonical single-IDAT PNG", async () => {
 		const headless = createWorkerHeadless();
 		const png = await headless.renderSvg('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="#2563eb"/></svg>');

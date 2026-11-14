@@ -196,6 +196,50 @@ export function ensureWorkerBooted(): Promise<void> {
 // In dedicated worker scope, self-initialize synchronously
 const isWorkerScope = typeof window === "undefined" && typeof self !== "undefined";
 if (isWorkerScope) {
+	if (
+		(import.meta as ImportMeta & { env?: { MODE?: string } }).env?.MODE ===
+		"plot3d-smoke"
+	) {
+		self.addEventListener("message", async (event: MessageEvent) => {
+			if (event.data?.type !== "lh:plot3d-smoke") return;
+			try {
+				await ensureWorkerBooted();
+				const { renderPlot3D } = await import("../agent/plot3d.ts");
+				const adapter = createWorkerHeadless();
+				if (event.data.disableWebGL) {
+					const verify = adapter.verifyPlot3D!;
+					adapter.verifyPlot3D = (request, options) =>
+						verify(
+							{
+								...request,
+								html: request.html.replace(
+									"<head>",
+									"<head><script>HTMLCanvasElement.prototype.getContext=function(){return null;}</script>",
+								),
+							},
+							options,
+						);
+				}
+				headlessOverride.current = adapter;
+				try {
+					const result = await renderPlot3D(event.data.input);
+					self.postMessage({
+						type: "lh:plot3d-smoke-result",
+						requestId: event.data.requestId,
+						result,
+					});
+				} finally {
+					headlessOverride.current = createWorkerHeadless();
+				}
+			} catch (error) {
+				self.postMessage({
+					type: "lh:plot3d-smoke-result",
+					requestId: event.data.requestId,
+					error: String(error),
+				});
+			}
+		});
+	}
 	const handler = createWorkerMessageHandler(dispatchWorkerRequest, ensureWorkerBooted);
 	self.addEventListener("message", handler);
 	ensureWorkerBooted().catch((err) => {

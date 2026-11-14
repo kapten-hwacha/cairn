@@ -1,3 +1,4 @@
+import { installPlot3DHost } from "./plot3d-host.ts";
 import { buildDemoVerifySrcDoc } from "../worker/headless-worker.ts";
 import { listen } from "@tauri-apps/api/event";
 
@@ -466,6 +467,8 @@ function fromBase64(base64: string): Uint8Array {
 			}
 			return originalFetch(input, init);
 		};
+
+		installPlot3DHost(worker);
 
 		// Main-thread sandboxed iframe runner for lh:run-demo
 		worker.addEventListener("message", (event: MessageEvent) => {
