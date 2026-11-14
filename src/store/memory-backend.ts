@@ -28,6 +28,7 @@ import type {
 import { activeProblemOf, danglingQuestionOf } from "../core/native-messages.ts";
 import { phaseAt3Lh } from "../core/phases.ts";
 import { practiceRecordsFromChat, teachSessionSeedRating } from "../core/review.ts";
+import { getSqliteBackend } from "./sqlite-backend.ts";
 
 // ── In-Memory State ──────────────────────────────────────────────────────────
 
@@ -78,15 +79,21 @@ export function resetMemoryStores(): void {
 // ── Chats ────────────────────────────────────────────────────────────────────
 
 export async function memorySaveChat(record: ChatRecord): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.saveChat(record);
 	memoryChats.set(record.id, structuredClone(record));
 }
 
 export async function memoryGetChat(id: string): Promise<ChatRecord | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.getChat(id);
 	const record = memoryChats.get(id);
 	return record ? structuredClone(record) : null;
 }
 
 export async function memoryListChats(): Promise<ChatSummary[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.listChats();
 	const summaries: ChatSummary[] = [];
 	for (const record of memoryChats.values()) {
 		try {
@@ -108,12 +115,16 @@ export async function memoryListChats(): Promise<ChatSummary[]> {
 }
 
 export async function memoryDeleteChat(id: string): Promise<boolean> {
+	const db = await getSqliteBackend();
+	if (db) return db.deleteChat(id);
 	const existed = memoryChats.delete(id);
 	memoryChatImages.delete(id);
 	return existed;
 }
 
 export async function memorySearchChats(query: string, limit = 20): Promise<ChatSearchHit[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.searchChats(query, limit);
 	const q = query.trim().toLowerCase();
 	if (!q) return [];
 	const hits: ChatSearchHit[] = [];
@@ -153,6 +164,8 @@ export async function memorySearchChats(query: string, limit = 20): Promise<Chat
 }
 
 export async function memorySaveImageSnapshot(chatId: string, snapshotId: string, image: ImageSnapshot): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.saveImageSnapshot(chatId, snapshotId, image);
 	let map = memoryChatImages.get(chatId);
 	if (!map) {
 		map = new Map();
@@ -171,6 +184,8 @@ export async function memorySaveImageSnapshot(chatId: string, snapshotId: string
 }
 
 export async function memoryGetImageSnapshot(chatId: string, snapshotId: string): Promise<ImageSnapshot | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.getImageSnapshot(chatId, snapshotId);
 	const img = memoryChatImages.get(chatId)?.get(snapshotId);
 	return img ? structuredClone(img) : null;
 }
@@ -178,47 +193,67 @@ export async function memoryGetImageSnapshot(chatId: string, snapshotId: string)
 // ── Graph ────────────────────────────────────────────────────────────────────
 
 export async function memoryAppendNode(node: GraphNode): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendNode(node);
 	memoryNodes.push(structuredClone(node));
 	memoryGraphRevision++;
 }
 
 export async function memoryReadNodes(): Promise<GraphNode[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readNodes();
 	return memoryNodes.map((n) => structuredClone(n));
 }
 
 export async function memoryAppendChain(chain: GraphChain): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendChain(chain);
 	memoryChains.push(structuredClone(chain));
 	memoryGraphRevision++;
 }
 
 export async function memoryReadChains(): Promise<GraphChain[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readChains();
 	return memoryChains.map((c) => structuredClone(c));
 }
 
 export async function memoryAppendCheckpoint(checkpoint: SessionCheckpoint): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendCheckpoint(checkpoint);
 	memoryCheckpoints.push(structuredClone(checkpoint));
 	memoryGraphRevision++;
 }
 
 export async function memoryReadCheckpoints(): Promise<SessionCheckpoint[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readCheckpoints();
 	return memoryCheckpoints.map((cp) => structuredClone(cp));
 }
 
 export async function memoryAppendCoverage(entry: CoverageEntry): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendCoverage(entry);
 	memoryCoverage.push(structuredClone(entry));
 	memoryGraphRevision++;
 }
 
 export async function memoryReadCoverage(): Promise<CoverageEntry[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readCoverage();
 	return memoryCoverage.map((c) => structuredClone(c));
 }
 
 export async function memoryAppendRegroup(regroup: GraphRegroup): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendRegroup(regroup);
 	memoryRegroups.push(structuredClone(regroup));
 	memoryGraphRevision++;
 }
 
 export async function memoryReadRegroups(): Promise<unknown[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readRegroups();
 	return [...memoryRegroups];
 }
 
@@ -227,6 +262,8 @@ export function appendRawMemoryRegroup(raw: unknown): void {
 }
 
 export async function memoryUpsertSource(source: NotesSource): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.upsertSource(source);
 	const prev = memorySources.get(source.id);
 	const next = prev ? { ...source, extractions: prev.extractions } : source;
 	memorySources.set(source.id, structuredClone(next));
@@ -234,10 +271,14 @@ export async function memoryUpsertSource(source: NotesSource): Promise<void> {
 }
 
 export async function memoryReadSources(): Promise<NotesSource[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readSources();
 	return Array.from(memorySources.values()).map((s) => structuredClone(s));
 }
 
 export async function memoryDeleteSources(ids: ReadonlySet<string>): Promise<number> {
+	const db = await getSqliteBackend();
+	if (db) return db.deleteSources(ids);
 	let removed = 0;
 	for (const id of ids) {
 		if (memorySources.delete(id)) {
@@ -251,6 +292,8 @@ export async function memoryDeleteSources(ids: ReadonlySet<string>): Promise<num
 }
 
 export async function memoryAppendSourceUsage(id: string, entry: ExtractionRunUsage): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendSourceUsage(id, entry);
 	const source = memorySources.get(id);
 	if (!source) return;
 	source.extractions = source.extractions?.some((r) => r.startedAt === entry.startedAt)
@@ -260,10 +303,14 @@ export async function memoryAppendSourceUsage(id: string, entry: ExtractionRunUs
 }
 
 export async function memoryReadPositions(): Promise<Record<string, Position>> {
+	const db = await getSqliteBackend();
+	if (db) return db.readPositions();
 	return structuredClone(memoryPositions);
 }
 
 export async function memoryWritePositions(positions: Record<string, Position>): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.writePositions(positions);
 	memoryPositions = structuredClone(positions);
 	memoryGraphRevision++;
 }
@@ -275,6 +322,8 @@ export async function memoryRewriteLedgers(next: {
 	checkpoints?: SessionCheckpoint[];
 	regroups?: GraphRegroup[];
 }): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.rewriteLedgers(next);
 	if (next.nodes !== undefined) {
 		memoryNodes.length = 0;
 		memoryNodes.push(...next.nodes.map((n) => structuredClone(n)));
@@ -299,6 +348,8 @@ export async function memoryRewriteLedgers(next: {
 }
 
 export async function memorySearchNodes(query: string, limit = 20): Promise<NodeSearchHit[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.searchNodes(query, limit);
 	const q = query.trim().toLowerCase();
 	if (!q) return [];
 	const hits: NodeSearchHit[] = [];
@@ -322,6 +373,8 @@ export async function memorySearchNodes(query: string, limit = 20): Promise<Node
 }
 
 export async function memoryReadPracticeHistory(): Promise<PracticeHistory> {
+	const db = await getSqliteBackend();
+	if (db) return db.readPracticeHistory();
 	const records: PracticeRecord[] = [];
 	const teachChatIds = new Set<string>();
 	const teachRatings = new Map<string, ReviewRating>();
@@ -343,12 +396,16 @@ export async function memoryReadPracticeHistory(): Promise<PracticeHistory> {
 }
 
 export async function memorySyncFsrsCards(cards: FsrsCardRow[]): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.syncFsrsCards(cards);
 	for (const card of cards) {
 		memoryFsrsCards.set(card.nodeId, structuredClone(card));
 	}
 }
 
 export async function memoryReadFsrsCards(dueBeforeMs?: number): Promise<FsrsCardRow[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readFsrsCards(dueBeforeMs);
 	const list: FsrsCardRow[] = [];
 	for (const card of memoryFsrsCards.values()) {
 		if (dueBeforeMs === undefined || card.dueAtMs <= dueBeforeMs) {
@@ -359,21 +416,29 @@ export async function memoryReadFsrsCards(dueBeforeMs?: number): Promise<FsrsCar
 }
 
 export async function memoryGetGraphRevision(): Promise<number> {
+	const db = await getSqliteBackend();
+	if (db) return db.getGraphRevision();
 	return memoryGraphRevision;
 }
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 
 export async function memorySaveJob(job: JobRecord): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.saveJob(job);
 	memoryJobs.set(job.id, structuredClone(job));
 }
 
 export async function memoryGetJob(id: string): Promise<JobRecord | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.getJob(id);
 	const j = memoryJobs.get(id);
 	return j ? structuredClone(j) : null;
 }
 
 export async function memoryListJobs(chatId: string): Promise<JobRecord[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.listJobs(chatId);
 	const list: JobRecord[] = [];
 	for (const j of memoryJobs.values()) {
 		if (j.chatId === chatId) {
@@ -384,6 +449,8 @@ export async function memoryListJobs(chatId: string): Promise<JobRecord[]> {
 }
 
 export async function memoryFindJobByToolCallId(chatId: string, toolCallId: string): Promise<JobRecord | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.findJobByToolCallId(chatId, toolCallId);
 	for (const j of memoryJobs.values()) {
 		if (j.chatId === chatId && j.toolCallId === toolCallId) {
 			return structuredClone(j);
@@ -393,6 +460,8 @@ export async function memoryFindJobByToolCallId(chatId: string, toolCallId: stri
 }
 
 export async function memoryDeleteJobsForChat(chatId: string): Promise<number> {
+	const db = await getSqliteBackend();
+	if (db) return db.deleteJobsForChat(chatId);
 	let removed = 0;
 	for (const [id, j] of Array.from(memoryJobs.entries())) {
 		if (j.chatId === chatId) {
@@ -406,6 +475,8 @@ export async function memoryDeleteJobsForChat(chatId: string): Promise<number> {
 // ── KV ───────────────────────────────────────────────────────────────────────
 
 export async function getMemoryKv(key: string): Promise<unknown | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.getKv(key);
 	if (memoryRawKv.has(key)) {
 		const raw = memoryRawKv.get(key)!;
 		return JSON.parse(raw);
@@ -417,6 +488,8 @@ export async function getMemoryKv(key: string): Promise<unknown | null> {
 }
 
 export async function setMemoryKv(key: string, value: unknown): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.setKv(key, value);
 	memoryRawKv.delete(key);
 	memoryKv.set(key, structuredClone(value));
 }
@@ -433,10 +506,14 @@ export function setCorruptMemoryKv(key: string): void {
 // ── Study ────────────────────────────────────────────────────────────────────
 
 export async function memoryReadIntervals(): Promise<unknown[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.readIntervals();
 	return [...memoryIntervals];
 }
 
 export async function memoryAppendIntervals(list: StudyInterval[]): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.appendIntervals(list);
 	for (const i of list) {
 		memoryIntervals.push(structuredClone(i));
 	}
@@ -449,18 +526,26 @@ export function appendRawMemoryInterval(raw: unknown): void {
 // ── Prompt Overrides ─────────────────────────────────────────────────────────
 
 export async function listMemoryPromptOverrides(): Promise<string[]> {
+	const db = await getSqliteBackend();
+	if (db) return db.listPromptOverrides();
 	return Array.from(memoryPromptOverrides.keys()).sort();
 }
 
 export async function readMemoryPromptOverride(segmentPath: string): Promise<string | null> {
+	const db = await getSqliteBackend();
+	if (db) return db.readPromptOverride(segmentPath);
 	return memoryPromptOverrides.get(segmentPath) ?? null;
 }
 
 export async function writeMemoryPromptOverride(segmentPath: string, text: string): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.writePromptOverride(segmentPath, text);
 	memoryPromptOverrides.set(segmentPath, text);
 }
 
 export async function deleteMemoryPromptOverride(segmentPath: string): Promise<void> {
+	const db = await getSqliteBackend();
+	if (db) return db.deletePromptOverride(segmentPath);
 	memoryPromptOverrides.delete(segmentPath);
 }
 
