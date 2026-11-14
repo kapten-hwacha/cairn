@@ -27,7 +27,8 @@ import { MalformedQuestion } from "@/components/practice/malformed-question";
 import { artifactRenderers } from "@/components/artifacts";
 import { SubagentSteerCard } from "@/components/artifacts/steer-card";
 import { ChatSessionComposer } from "@/components/chat/composer";
-import { AttachmentPicker, AttachmentPreview, AttachmentTray, useAttachmentDraft } from "@/components/chat/chat-attachments";
+import { AttachmentPicker, AttachmentPreview, AttachmentTray, PencilSketchButton, useAttachmentDraft } from "@/components/chat/chat-attachments";
+import { isPencilKitAvailable, openPencilDrawer } from "@/lib/pencilkit";
 import { useEnterSubmits } from "@/components/shared/enter-submits";
 import { blurAfterPointerClick } from "@/components/shared/focus-hygiene";
 import { dockStateKey } from "@/components/shell/dock-state-key";
@@ -1803,10 +1804,29 @@ export function Chat({
 								sendAllowed={sendAllowed}
 								dictationActive={dictation.active}
 								attachmentControl={
-									<AttachmentPicker
-										disabled={busy || !!pending || !!activeProblem || compacting || attachments.reading || sendingAttachments}
-										onFiles={(files) => void attachments.add(files)}
-									/>
+									<div className="flex items-center">
+										<AttachmentPicker
+											disabled={busy || !!pending || !!activeProblem || compacting || attachments.reading || sendingAttachments}
+											onFiles={(files) => void attachments.add(files)}
+										/>
+										{isPencilKitAvailable() && (
+											<PencilSketchButton
+												disabled={busy || !!pending || !!activeProblem || compacting || attachments.reading || sendingAttachments}
+												onClick={() => {
+													const key = `chat:${chatId || "draft"}`;
+													void openPencilDrawer({ key }).then((res) => {
+														if (!res.cancelled && res.pngBase64) {
+															attachments.addDirect({
+																name: "sketch.png",
+																mimeType: "image/png",
+																data: res.pngBase64,
+															});
+														}
+													});
+												}}
+											/>
+										)}
+									</div>
 								}
 								sendBlocked={sendingAttachments || attachments.reading || (busy && attachments.files.length > 0)}
 								onEscape={dictation.active ? dictation.cancel : undefined}

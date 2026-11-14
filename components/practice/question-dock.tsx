@@ -42,6 +42,8 @@ import {
 } from "@/src/core";
 import { CONFIDENCE_COLORS, confidenceRailStyle } from "@/components/practice/confidence-rail";
 import { QuadernoRoundTripBar } from "@/components/practice/quaderno-controls";
+import { PencilScratchpadBar } from "@/components/practice/pencil-scratchpad-bar";
+import { isPencilKitAvailable } from "@/lib/pencilkit";
 
 /**
  * The question dock — a pending quiz/ask REPLACES the chat composer: the
@@ -913,28 +915,37 @@ function QuestionDockForm({
 			    is for dumping, soon dictated; the button submits); text mode
 			    keeps "Your answer" with Enter-to-submit. */}
 			<div className="border-t border-border/60 px-4 py-2">
-				<QuadernoRoundTripBar
-					title={quadernoPayload.title}
-					markdown={quadernoPayload.markdown}
-					docTitle={quadernoPayload.docTitle}
-					toolCallId={toolCallId}
-					attachedFiles={attachments}
-					onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
-					onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
-					onTranscribed={(transcription) => {
-						if (qd.mode === "text") {
-							const current = answerTextRef.current.trim();
-							const next = current ? `${current}\n\n${transcription}` : transcription;
-							answerTextRef.current = next;
-							setText(next);
-						} else {
-							const current = thinkingTextRef.current.trim();
-							const next = current ? `${current}\n\n${transcription}` : transcription;
-							thinkingTextRef.current = next;
-							setThinking(next);
-						}
-					}}
-				/>
+				{isPencilKitAvailable() ? (
+					<PencilScratchpadBar
+						drawingKey={`question:${toolCallId}`}
+						attachedFiles={attachments}
+						onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
+						onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
+					/>
+				) : (
+					<QuadernoRoundTripBar
+						title={quadernoPayload.title}
+						markdown={quadernoPayload.markdown}
+						docTitle={quadernoPayload.docTitle}
+						toolCallId={toolCallId}
+						attachedFiles={attachments}
+						onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
+						onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
+						onTranscribed={(transcription) => {
+							if (qd.mode === "text") {
+								const current = answerTextRef.current.trim();
+								const next = current ? `${current}\n\n${transcription}` : transcription;
+								answerTextRef.current = next;
+								setText(next);
+							} else {
+								const current = thinkingTextRef.current.trim();
+								const next = current ? `${current}\n\n${transcription}` : transcription;
+								thinkingTextRef.current = next;
+								setThinking(next);
+							}
+						}}
+					/>
+				)}
 			</div>
 			<form
 				className="border-t border-border/60 p-1.5"

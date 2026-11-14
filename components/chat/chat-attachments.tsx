@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileTextIcon, PaperclipIcon, XIcon } from "lucide-react";
+import { FileTextIcon, PaperclipIcon, PencilIcon, XIcon } from "lucide-react";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES, MAX_TOTAL_ATTACHMENT_BYTES, type ChatAttachment } from "@/src/core";
 
 const acceptedTypes = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
@@ -56,6 +56,10 @@ export function useAttachmentDraft() {
 	};
 	return {
 		files, error, reading, add,
+		addDirect: (attachment: ChatAttachment) => {
+			setError(undefined);
+			setFiles((current) => [...current.filter((item) => item.name !== attachment.name), attachment]);
+		},
 		remove: (file: ChatAttachment) => setFiles((current) => current.filter((item) => item !== file)),
 		accepted: (sent: readonly ChatAttachment[]) => setFiles((current) => current.filter((file) => !sent.includes(file))),
 	};
@@ -79,6 +83,21 @@ export function AttachmentPicker({ disabled, onFiles }: { disabled: boolean; onF
 				<PaperclipIcon className="size-4" />
 			</button>
 		</>
+	);
+}
+
+export function PencilSketchButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+	return (
+		<button
+			type="button"
+			aria-label="Open Apple Pencil scratchpad"
+			title="Open Apple Pencil scratchpad"
+			disabled={disabled}
+			onClick={onClick}
+			className="flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-accent disabled:opacity-40"
+		>
+			<PencilIcon className="size-4" />
+		</button>
 	);
 }
 

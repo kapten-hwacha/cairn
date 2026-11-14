@@ -10,6 +10,8 @@ import { PathInput } from "@/components/sources/path-input";
 import { cn } from "@/lib/utils";
 import { formatPracticeProblemForQuaderno } from "@/src/core";
 import { QuadernoRoundTripBar } from "@/components/practice/quaderno-controls";
+import { PencilScratchpadBar } from "@/components/practice/pencil-scratchpad-bar";
+import { isPencilKitAvailable } from "@/lib/pencilkit";
 
 /**
  * The practice dock (practice sessions, owner design 2026-10-04): an
@@ -138,21 +140,30 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 			</div>
 
 			<div className="border-t border-border/60 px-4 py-2">
-				<QuadernoRoundTripBar
-					title={quadernoPayload.title}
-					markdown={quadernoPayload.markdown}
-					docTitle={quadernoPayload.docTitle}
-					toolCallId={problemCallId}
-					attachedFiles={attachments}
-					onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
-					onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
-					onTranscribed={(transcription) => {
-						const current = thinkingRef.current.trim();
-						const next = current ? `${current}\n\n${transcription}` : transcription;
-						thinkingRef.current = next;
-						setThinking(next);
-					}}
-				/>
+				{isPencilKitAvailable() ? (
+					<PencilScratchpadBar
+						drawingKey={`practice:${problemCallId}`}
+						attachedFiles={attachments}
+						onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
+						onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
+					/>
+				) : (
+					<QuadernoRoundTripBar
+						title={quadernoPayload.title}
+						markdown={quadernoPayload.markdown}
+						docTitle={quadernoPayload.docTitle}
+						toolCallId={problemCallId}
+						attachedFiles={attachments}
+						onAttach={(att) => setAttachments((prev) => [...prev.filter((a) => a.name !== att.name), att])}
+						onRemoveAttachment={(name) => setAttachments((prev) => prev.filter((a) => a.name !== name))}
+						onTranscribed={(transcription) => {
+							const current = thinkingRef.current.trim();
+							const next = current ? `${current}\n\n${transcription}` : transcription;
+							thinkingRef.current = next;
+							setThinking(next);
+						}}
+					/>
+				)}
 			</div>
 
 			{/* The learner's half: Enter SENDS (owner round 2, 2026-10-05);
