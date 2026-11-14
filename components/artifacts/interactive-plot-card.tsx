@@ -195,7 +195,7 @@ export function InteractivePlotCard({
         left: bounds?.left ?? 0,
         top: bounds?.top ?? 0,
         width: bounds?.width ?? "100vw",
-        height: bounds?.height ?? "100vh",
+        height: bounds?.height ?? "100dvh",
         padding: 16,
       }
     : {};
