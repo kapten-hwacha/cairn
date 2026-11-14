@@ -113,5 +113,11 @@ describe("src/worker/headless-worker.ts & photon-wasm.ts", () => {
 
 		const infDoc = buildDemoVerifySrcDoc("<!doctype html><html><body></body></html>", "req-test-4", Infinity);
 		assert.match(infDoc, /var settleMs = 3000;/);
+
+		const scriptBreakoutDoc = buildDemoVerifySrcDoc("<!doctype html><html><body></body></html>", "req-test-5", 500, '1; </script><script>alert(1)</script>');
+		assert.match(scriptBreakoutDoc, /Content-Security-Policy/);
+		assert.match(scriptBreakoutDoc, /connect-src 'none'/);
+		assert.ok(!scriptBreakoutDoc.includes("</script><script>alert(1)"), "Expected </script> inside probe to be escaped");
+		assert.ok(scriptBreakoutDoc.includes("\\u003c/script>"), "Expected < to be escaped as \\u003c");
 	});
 });

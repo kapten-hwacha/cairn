@@ -52,10 +52,26 @@ setTimeout(post,50);
 setTimeout(post,400);
 })();</script>`;
 
-/** Inject the bridge before </body> (or at the end of a body-less document). */
+export const DEMO_CSP_CONTENT =
+	"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; base-uri 'none'";
+
+export const DEMO_CSP_META = `<meta http-equiv="Content-Security-Policy" content="${DEMO_CSP_CONTENT}">`;
+
+/** Inject the CSP meta tag and the bridge before </body> (or at the end of a body-less document). */
 export function buildDemoSrcDoc(html: string): string {
-	if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${DEMO_BRIDGE_SCRIPT}</body>`);
-	return `${html}${DEMO_BRIDGE_SCRIPT}`;
+	let withCsp: string;
+	if (/<head[^>]*>/i.test(html)) {
+		withCsp = html.replace(/<head[^>]*>/i, (m) => `${m}${DEMO_CSP_META}`);
+	} else if (/<html[^>]*>/i.test(html)) {
+		withCsp = html.replace(/<html[^>]*>/i, (m) => `${m}<head>${DEMO_CSP_META}</head>`);
+	} else {
+		withCsp = `${DEMO_CSP_META}${html}`;
+	}
+	if (/<\/body>/i.test(withCsp)) {
+		const lastIdx = withCsp.toLowerCase().lastIndexOf("</body>");
+		return `${withCsp.slice(0, lastIdx)}${DEMO_BRIDGE_SCRIPT}${withCsp.slice(lastIdx)}`;
+	}
+	return `${withCsp}${DEMO_BRIDGE_SCRIPT}`;
 }
 
 export interface DemoBridgeState {

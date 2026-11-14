@@ -247,6 +247,16 @@ async function renderPdfPages(
 	}
 }
 
+const DEMO_VERIFY_CSP_META =
+	'<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\' \'unsafe-eval\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:; connect-src \'none\'; media-src data: blob:; frame-src \'none\'; object-src \'none\'; base-uri \'none\'">';
+
+function escapeJsonForInlineScript(json: string): string {
+	return json
+		.replace(/</g, "\\u003c")
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
+}
+
 export function buildDemoVerifySrcDoc(
 	html: string,
 	requestId: string,
@@ -257,10 +267,11 @@ export function buildDemoVerifySrcDoc(
 		typeof settleMs === "number" && Number.isFinite(settleMs)
 			? Math.max(0, Math.min(30_000, Math.floor(settleMs)))
 			: 3000;
-	const probeExpr = probe ? JSON.stringify(probe) : "null";
-	const script = `<script>
+	const probeExpr = probe ? escapeJsonForInlineScript(JSON.stringify(probe)) : "null";
+	const safeRequestId = escapeJsonForInlineScript(JSON.stringify(requestId));
+	const script = `${DEMO_VERIFY_CSP_META}<script>
 (function() {
-	var requestId = ${JSON.stringify(requestId)};
+	var requestId = ${safeRequestId};
 	var settleMs = ${safeSettleMs};
 	var probe = ${probeExpr};
 	var consoleErrors = [];

@@ -605,6 +605,7 @@ function fromBase64(base64: string): Uint8Array {
 
 				const onDone = (doneEvent: MessageEvent) => {
 					if (
+						doneEvent.source === iframe.contentWindow &&
 						doneEvent.data?.type === "lh:demo-probe-done" &&
 						doneEvent.data?.requestId === requestId
 					) {

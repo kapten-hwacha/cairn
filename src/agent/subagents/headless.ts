@@ -1,9 +1,8 @@
 import * as fs from "node:fs";
 import { Buffer } from "node:buffer";
 import { createRequire } from "node:module";
-import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { standardFontsDir } from "./pdf-ops";
 import {
 	PLOT3D_DEADLINE_MS,
@@ -341,9 +340,43 @@ async function withBrowserPage<T>(
 	}
 }
 
-/** A temp dir per invocation; removed in finally. */
-function tempDir(prefix: string): string {
-	return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+export const DEMO_CSP =
+	"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; base-uri 'none'";
+
+export function injectDemoCsp(html: string): string {
+	const meta = `<meta http-equiv="Content-Security-Policy" content="${DEMO_CSP}">`;
+	if (/<head[^>]*>/i.test(html)) {
+		return html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`);
+	}
+	if (/<html[^>]*>/i.test(html)) {
+		return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${meta}</head>`);
+	}
+	return `${meta}${html}`;
+}
+
+export function assertSafeFallbackSvg(svg: string): void {
+	if (/<!DOCTYPE|<!ENTITY/i.test(svg)) {
+		throw new Error("SVG fallback rejects DOCTYPE and ENTITY declarations");
+	}
+	if (/<\?/.test(svg)) {
+		throw new Error("SVG fallback rejects XML processing instructions");
+	}
+	if (/<(script|foreignObject|iframe|embed|object)\b/i.test(svg)) {
+		throw new Error("SVG fallback rejects executable or embedded HTML elements");
+	}
+	if (/\bon[a-z]+\s*=/i.test(svg)) {
+		throw new Error("SVG fallback rejects inline event handlers");
+	}
+	if (/@import\b/i.test(svg)) {
+		throw new Error("SVG fallback rejects CSS @import");
+	}
+	const hrefMatches = svg.matchAll(/\b(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi);
+	for (const m of hrefMatches) {
+		const val = (m[1] ?? m[2] ?? "").trim();
+		if (val && !val.startsWith("#") && !/^data:image\/(?:png|jpeg);base64,/i.test(val)) {
+			throw new Error("SVG fallback rejects external href references");
+		}
+	}
 }
 
 // ─── Demo execution ──────────────────────────────────────────────────────────
@@ -353,9 +386,7 @@ async function runDemo(
 	opts: RunDemoOptions = {},
 ): Promise<DemoRunResult> {
 	const settleMs = opts.settleMs ?? 2000;
-	const dir = tempDir("lh-demo-");
-	const file = path.join(dir, "demo.html");
-	fs.writeFileSync(file, html, "utf-8");
+	const cspHtml = injectDemoCsp(html);
 
 	const consoleErrors: string[] = [];
 	const pageErrors: string[] = [];
@@ -363,47 +394,52 @@ async function runDemo(
 	let probeResult: unknown;
 	let probed = false;
 
-	try {
-		await withBrowserPage(async (page) => {
-			page.on("console", (msg) => {
-				if (msg.type() === "error") consoleErrors.push(msg.text());
-			});
-			page.on("pageerror", (err) =>
-				pageErrors.push(err instanceof Error ? err.message : String(err)),
-			);
-			page.on("requestfailed", (req) =>
-				failedRequests.push(
-					`${req.url()} (${req.failure()?.errorText ?? "failed"})`,
-				),
-			);
-
-			try {
-				await page.goto(pathToFileURL(file).href, {
-					waitUntil: "load",
-					timeout: 30_000,
-				});
-				await new Promise((resolve) => setTimeout(resolve, settleMs));
-				if (opts.probe) {
-					try {
-						probeResult = await page.evaluate(opts.probe);
-					} catch (err) {
-						pageErrors.push(
-							`probe failed: ${err instanceof Error ? err.message : String(err)}`,
-						);
-					}
-					probed = true;
-				}
-			} catch (err) {
-				pageErrors.push(err instanceof Error ? err.message : String(err));
+	await withBrowserPage(async (page) => {
+		await page.setRequestInterception(true);
+		const onRequest = (req: import("puppeteer-core").HTTPRequest) => {
+			const url = req.url();
+			if (url === "about:blank" || url.startsWith("data:") || url.startsWith("blob:")) {
+				void req.continue().catch(() => {});
+			} else {
+				void req.abort("blockedbyclient").catch(() => {});
 			}
+		};
+		page.on("request", onRequest);
+		page.on("console", (msg) => {
+			if (msg.type() === "error") consoleErrors.push(msg.text());
 		});
-	} finally {
+		page.on("pageerror", (err) =>
+			pageErrors.push(err instanceof Error ? err.message : String(err)),
+		);
+		page.on("requestfailed", (req) =>
+			failedRequests.push(
+				`${req.url()} (${req.failure()?.errorText ?? "failed"})`,
+			),
+		);
+
 		try {
-			fs.rmSync(dir, { recursive: true, force: true });
-		} catch {
-			/* best-effort cleanup */
+			await page.setContent(cspHtml, {
+				waitUntil: "load",
+				timeout: 30_000,
+			});
+			await new Promise((resolve) => setTimeout(resolve, settleMs));
+			if (opts.probe) {
+				try {
+					probeResult = await page.evaluate(opts.probe);
+				} catch (err) {
+					pageErrors.push(
+						`probe failed: ${err instanceof Error ? err.message : String(err)}`,
+					);
+				}
+				probed = true;
+			}
+		} catch (err) {
+			pageErrors.push(err instanceof Error ? err.message : String(err));
+		} finally {
+			page.off("request", onRequest);
+			await page.setRequestInterception(false).catch(() => {});
 		}
-	}
+	});
 
 	return {
 		consoleErrors,
@@ -533,34 +569,38 @@ async function renderSvg(
 		if (opts.nativeOnly) throw error;
 		/* fall through to the browser path */
 	}
-	const dir = tempDir("lh-visual-");
-	const file = path.join(dir, "figure.html");
-	fs.writeFileSync(
-		file,
-		`<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}svg{display:block}</style></head><body>${svg}</body></html>`,
-		"utf-8",
-	);
+	assertSafeFallbackSvg(svg);
+	const figureHtml = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:;"><style>html,body{margin:0;padding:0;background:#fff}svg{display:block}</style></head><body>${svg}</body></html>`;
 
 	return withBrowserPage(async (page) => {
 		const { width, height } = svgViewport(svg, opts);
-		await page.setViewport({ width, height });
-		await page.goto(pathToFileURL(file).href, {
-			waitUntil: "load",
-			timeout: 30_000,
-		});
-		const shot = (await page.screenshot({
-			fullPage: true,
-			type: "png",
-		})) as Buffer;
-		// Chrome's raw split-IDAT PNG is canonicalized before it reaches a
-		// provider (see providerSafePng) — the visual-maker feeds this exact
-		// buffer back to the vision model as its only way to "look".
-		return providerSafePng(Buffer.from(shot));
-	}).finally(() => {
+		await page.setRequestInterception(true);
+		const onRequest = (req: import("puppeteer-core").HTTPRequest) => {
+			const url = req.url();
+			if (url === "about:blank" || url.startsWith("data:")) {
+				void req.continue().catch(() => {});
+			} else {
+				void req.abort("blockedbyclient").catch(() => {});
+			}
+		};
+		page.on("request", onRequest);
 		try {
-			fs.rmSync(dir, { recursive: true, force: true });
-		} catch {
-			/* best-effort cleanup */
+			await page.setViewport({ width, height });
+			await page.setContent(figureHtml, {
+				waitUntil: "load",
+				timeout: 30_000,
+			});
+			const shot = (await page.screenshot({
+				fullPage: true,
+				type: "png",
+			})) as Buffer;
+			// Chrome's raw split-IDAT PNG is canonicalized before it reaches a
+			// provider (see providerSafePng) — the visual-maker feeds this exact
+			// buffer back to the vision model as its only way to "look".
+			return providerSafePng(Buffer.from(shot));
+		} finally {
+			page.off("request", onRequest);
+			await page.setRequestInterception(false).catch(() => {});
 		}
 	});
 }

@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { realHeadless } from "../../src/agent/subagents/headless.ts";
+import { assertSafeFallbackSvg, injectDemoCsp, realHeadless } from "../../src/agent/subagents/headless.ts";
 
 function pngFacts(buf: Buffer): { w: number; h: number; idats: number } {
 	assert.equal(buf.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", "PNG signature");
@@ -65,5 +65,21 @@ describe("native renderSvg (resvg in-process, browser fallback)", () => {
 		assert.equal(f.w, 300);
 		// A blank 300x100 white PNG is ~300 bytes; glyphs push it well past.
 		assert.ok(png.length > 1000, `text rendered (png ${png.length} bytes > 1000)`);
+	});
+
+	it("assertSafeFallbackSvg rejects executable or external SVG constructs and injectDemoCsp injects strict CSP", () => {
+		assert.doesNotThrow(() =>
+			assertSafeFallbackSvg('<svg xmlns="http://www.w3.org/2000/svg"><use href="#local"/><image href="data:image/png;base64,AAAA"/></svg>'),
+		);
+		assert.throws(() => assertSafeFallbackSvg("<svg><script>alert(1)</script></svg>"), /executable/);
+		assert.throws(() => assertSafeFallbackSvg("<svg><foreignObject><iframe></iframe></foreignObject></svg>"), /executable/);
+		assert.throws(() => assertSafeFallbackSvg('<svg onload="alert(1)"></svg>'), /event handlers/);
+		assert.throws(() => assertSafeFallbackSvg('<!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><svg/>'), /DOCTYPE/);
+		assert.throws(() => assertSafeFallbackSvg('<svg><image href="file:///etc/passwd"/></svg>'), /external href/);
+		assert.throws(() => assertSafeFallbackSvg('<svg><image xlink:href="https://evil.example/x.png"/></svg>'), /external href/);
+
+		const cspHtml = injectDemoCsp("<!doctype html><html><head><title>T</title></head><body></body></html>");
+		assert.match(cspHtml, /Content-Security-Policy/);
+		assert.match(cspHtml, /connect-src 'none'/);
 	});
 });

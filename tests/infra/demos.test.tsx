@@ -215,6 +215,8 @@ describe("demo bridge", () => {
 	it("appends the bridge when the document has no </body>", () => {
 		const srcDoc = buildDemoSrcDoc("<div>fragment demo</div>");
 		assert.match(srcDoc, /demo-resize/);
+		assert.match(srcDoc, /Content-Security-Policy/);
+		assert.match(srcDoc, /connect-src 'none'/);
 		assert.ok(srcDoc.endsWith("</script>"));
 		assert.match(srcDoc, /fragment demo/);
 	});
