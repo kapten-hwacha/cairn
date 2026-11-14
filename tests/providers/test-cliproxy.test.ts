@@ -25,9 +25,9 @@ describe("CLIProxyAPI integration", () => {
 	const originalFetch = globalThis.fetch;
 
 	before(() => {
-		process.env.LH_DATA_DIR = scratch;
-		process.env.LH_AUTH_FILE = path.join(scratch, "auth.json");
-		fs.writeFileSync(process.env.LH_AUTH_FILE, "{}");
+		process.env.CAIRN_DATA_DIR = scratch;
+		process.env.CAIRN_AUTH_FILE = path.join(scratch, "auth.json");
+		fs.writeFileSync(process.env.CAIRN_AUTH_FILE, "{}");
 		installCustomProviderSource();
 
 		globalThis.fetch = async (input, init) => {

@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
 
-// LH_DATA_DIR seam before importing any config-dependent code
+// CAIRN_DATA_DIR seam before importing any config-dependent code
 const TMP_DATA = fs.mkdtempSync(path.join(os.tmpdir(), "lh-profiler-test-"));
-process.env.LH_DATA_DIR = TMP_DATA;
+process.env.CAIRN_DATA_DIR = TMP_DATA;
 
 const {
 	computeMetacognitiveMetrics,

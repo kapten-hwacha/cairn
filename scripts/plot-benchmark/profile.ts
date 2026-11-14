@@ -8,7 +8,7 @@ import type { ProfileSnapshot } from "./contracts.ts";
 export async function loadProfile(
   profileDir: string,
 ): Promise<ProfileSnapshot> {
-  const file = path.join(profileDir, "learnharness.db");
+  const file = path.join(profileDir, "cairn.db");
   if (!fs.existsSync(file)) throw new Error("Profile database does not exist");
   const db = new DatabaseSync(file, { readOnly: true });
   try {

@@ -9,7 +9,7 @@ import type { ChatDeleteMode } from "@/src/core";
 import { DumbbellIcon, MoreHorizontalIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import { ActivitySection } from "@/components/shell/activity-dock";
 import { CoverageMenuBlock } from "@/components/graph/extraction-coverage";
-import { LhMark } from "@/components/shared/lh-mark";
+import { CairnMark } from "@/components/shared/cairn-mark";
 import { BrailleSpinner } from "@/components/shared/braille-spinner";
 import { KeyboardShortcuts } from "@/components/shared/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
@@ -862,9 +862,9 @@ function SessionsSidebar() {
 						<Link
 							href="/"
 							aria-label="Home"
-							className="lh-no-drag flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50"
+							className="lh-no-drag flex h-9 shrink-0 items-center justify-center rounded-md px-1.5 transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50"
 						>
-							<LhMark className="size-6" />
+							<CairnMark className="h-6 w-[72px]" />
 						</Link>
 					</Hint>
 					<Hint label="Close sidebar" action="toggle-sidebar">

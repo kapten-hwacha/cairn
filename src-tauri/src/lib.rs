@@ -152,16 +152,16 @@ pub fn run() {
 
             // Build Menu
             let app_handle = app.handle();
-            let app_menu = SubmenuBuilder::new(app_handle, "LearnHarness")
+            let app_menu = SubmenuBuilder::new(app_handle, "Cairn")
                 .item(&PredefinedMenuItem::about(
                     app_handle,
-                    Some("About LearnHarness"),
+                    Some("About Cairn"),
                     None,
                 )?)
                 .separator()
                 .item(&PredefinedMenuItem::hide(
                     app_handle,
-                    Some("Hide LearnHarness"),
+                    Some("Hide Cairn"),
                 )?)
                 .item(&PredefinedMenuItem::hide_others(
                     app_handle,
@@ -171,7 +171,7 @@ pub fn run() {
                 .separator()
                 .item(&PredefinedMenuItem::quit(
                     app_handle,
-                    Some("Quit LearnHarness"),
+                    Some("Quit Cairn"),
                 )?)
                 .build()?;
 

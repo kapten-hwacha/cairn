@@ -119,7 +119,7 @@ export async function cliproxyInstallationResponse(
 		|| (supplied !== null && supplied !== origin)
 	) {
 		return Response.json(
-			{ error: "CLIProxyAPI checks require a same-origin LearnHarness request." },
+			{ error: "CLIProxyAPI checks require a same-origin Cairn request." },
 			{ status: 403, headers },
 		);
 	}

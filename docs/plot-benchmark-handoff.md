@@ -8,7 +8,7 @@ The current working tree contains uncommitted plotting work and other changes. P
 
 ## Project background
 
-LearnHarness is an AI teaching application. A learner states what they want to understand; the system probes their current understanding, plans a lesson, teaches interactively, and offers practice. Conversations and a knowledge graph persist across sessions. Plots are teaching artifacts: their value depends on whether they accurately illustrate the concept in the learner's context, not simply on whether they look attractive. See `README.md`, `docs/teaching-methodology.md`, and `docs/architecture.md` for the broader product and architecture.
+Cairn is an AI teaching application. A learner states what they want to understand; the system probes their current understanding, plans a lesson, teaches interactively, and offers practice. Conversations and a knowledge graph persist across sessions. Plots are teaching artifacts: their value depends on whether they accurately illustrate the concept in the learner's context, not simply on whether they look attractive. See `README.md`, `docs/teaching-methodology.md`, and `docs/architecture.md` for the broader product and architecture.
 
 The teaching agent runs with model and tool configuration and can dispatch background work while the conversation continues. Background job completion and delivery are distinct: an outcome can be saved before it is delivered back to the session, and delivery may wait for an eligible point in the conversation. The interface projects saved conversation and job records into chat and artifact cards. A meaningful benchmark should therefore observe the learner-facing result and any failure or delay in delivery, not just the job's status.
 

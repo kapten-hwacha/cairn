@@ -92,7 +92,7 @@ export async function resolveQuadernoConfig(opts?: {
 			? path.join(homeDir, "Quaderno")
 			: resolvedSyncDir;
 
-	const folder = env.QUADERNO_LEARNHARNESS_FOLDER ?? dotEnvParsed.folder ?? DEFAULT_QUADERNO_FOLDER;
+	const folder = env.QUADERNO_CAIRN_FOLDER ?? dotEnvParsed.folder ?? DEFAULT_QUADERNO_FOLDER;
 
 	return {
 		baseUrl,

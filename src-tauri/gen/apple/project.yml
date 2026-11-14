@@ -1,6 +1,6 @@
-name: learnharness
+name: cairn
 options:
-  bundleIdPrefix: com.hwacha.learnharness
+  bundleIdPrefix: com.hwacha.cairn
   deploymentTarget:
     iOS: 17.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: LearnHarness
-      PRODUCT_BUNDLE_IDENTIFIER: com.hwacha.learnharness
+      PRODUCT_NAME: Cairn
+      PRODUCT_BUNDLE_IDENTIFIER: com.hwacha.cairn
       DEVELOPMENT_TEAM: VANZABPXZ6
 targetTemplates:
   app:
@@ -25,7 +25,7 @@ targetTemplates:
     settings:
       groups: [app]
 targets:
-  learnharness_iOS:
+  cairn_iOS:
     type: application
     platform: iOS
     sources:
@@ -37,13 +37,13 @@ targets:
       # via LIBRARY_SEARCH_PATHS, never bundled as resources.
       - path: Externals
         excludes: ["**/*.a"]
-      - path: learnharness_iOS
+      - path: cairn_iOS
       - path: assets
         buildPhase: resources
         type: folder
       - path: LaunchScreen.storyboard
     info:
-      path: learnharness_iOS/Info.plist
+      path: cairn_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
@@ -57,10 +57,10 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.5.0
-        CFBundleVersion: "0.5.0"
+        CFBundleShortVersionString: 0.1.0
+        CFBundleVersion: "0.1.0"
     entitlements:
-      path: learnharness_iOS/learnharness_iOS.entitlements
+      path: cairn_iOS/cairn_iOS.entitlements
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full
@@ -77,9 +77,9 @@ targets:
         OTHER_LDFLAGS: ["$(inherited)", "-Wl,-w"]
       configs:
         debug:
-          INFOPLIST_FILE: learnharness_iOS/Info-Debug.plist
+          INFOPLIST_FILE: cairn_iOS/Info-Debug.plist
         release:
-          INFOPLIST_FILE: learnharness_iOS/Info.plist
+          INFOPLIST_FILE: cairn_iOS/Info.plist
       groups: [app]
     dependencies:
       - framework: libapp.a

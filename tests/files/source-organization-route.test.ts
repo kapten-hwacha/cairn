@@ -7,9 +7,9 @@ import { after, beforeEach, it } from "node:test";
 import { resetMemoryStores, getMemoryKv, setMemoryKv, setRawMemoryKv } from "../../src/store/memory-backend.ts";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "lh-source-organization-"));
-process.env.LH_DATA_DIR = root;
-process.env.LH_AUTH_FILE = path.join(root, "auth.json");
-fs.writeFileSync(process.env.LH_AUTH_FILE, "{}\n");
+process.env.CAIRN_DATA_DIR = root;
+process.env.CAIRN_AUTH_FILE = path.join(root, "auth.json");
+fs.writeFileSync(process.env.CAIRN_AUTH_FILE, "{}\n");
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const { GET, POST } = await import("../../app/api/graph/sources/route.ts");
 const { stores } = await import("../../src/server/stores.ts");

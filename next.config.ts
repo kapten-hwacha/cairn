@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
 		},
 	},
 	// Public build metadata only; no new runtime Electron version API.
-	env: { LH_VERSION: pkg.version, LH_HOMEPAGE: pkg.homepage },
+	env: { CAIRN_VERSION: pkg.version, CAIRN_HOMEPAGE: pkg.homepage },
 	// Leave multipart headroom above the 25 MiB file allowance. This is a
 	// proxy buffer, not a rejection gate: the import route also bounds reads,
 	// validates actual file bytes and handles incomplete multipart bodies.
@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
 	// SECRETS (2026-10-08, caught in the payload audit): the same sweep
 	// ships the repo-root auth.json — the DEV BYOK key store — byte-identical
 	// into the DMG (the packaged app never reads it: the shell passes
-	// LH_AUTH_FILE → userData). Excluded here; build-server.mjs also REFUSES
+	// CAIRN_AUTH_FILE → userData). Excluded here; build-server.mjs also REFUSES
 	// to package any standalone still containing it. .env* belt-and-braces
 	// the same class. Next also copies loaded bare .env after tracing;
 	// the build-server refusal remains required even with these excludes.

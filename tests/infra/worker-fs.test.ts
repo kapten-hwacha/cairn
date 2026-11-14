@@ -21,8 +21,8 @@ import {
 
 describe("Worker node:* shims & runtime bridge", () => {
 	it("provides synchronous SHA-256 createHash/createHmac and AsyncLocalStorage context propagation", async () => {
-		const digest = shimCrypto.createHash("sha256").update("learnharness").digest("hex");
-		const expectedHash = nodeCrypto.createHash("sha256").update("learnharness").digest("hex");
+		const digest = shimCrypto.createHash("sha256").update("cairn").digest("hex");
+		const expectedHash = nodeCrypto.createHash("sha256").update("cairn").digest("hex");
 		assert.equal(digest, expectedHash);
 		assert.equal(digest, "65093e11f1dd950b15f073de0b03a43a6ed61b4cd2e07b001a3dc8b28ea0bb69");
 

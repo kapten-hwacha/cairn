@@ -122,8 +122,8 @@ export function installTauriPreload(deps: TauriPreloadDeps): void {
 				: name.replace(/^[/\\]+/, "");
 			const importedPath = `/imported/${cleanName}`;
 
-			if (typeof window !== "undefined" && (window as any).__LH_WORKER__) {
-				(window as any).__LH_WORKER__.postMessage({
+			if (typeof window !== "undefined" && (window as any).__CAIRN_WORKER__) {
+				(window as any).__CAIRN_WORKER__.postMessage({
 					type: "lh:import-file",
 					path: importedPath,
 					data: bytes,

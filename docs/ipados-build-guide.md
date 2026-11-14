@@ -1,14 +1,14 @@
-# LearnHarness iPadOS Build & Toolchain Guide
+# Cairn iPadOS Build & Toolchain Guide
 
-LearnHarness uses a single unified codebase running across macOS desktop and iPadOS tablets powered by Tauri v2 and an in-browser Web Worker backend with `memfs`.
+Cairn uses a single unified codebase running across macOS desktop and iPadOS tablets powered by Tauri v2 and an in-browser Web Worker backend with `memfs`.
 
-This guide documents the Apple build toolchain, prerequisites, codesigning configuration, and build commands for compiling and testing LearnHarness on iPadOS.
+This guide documents the Apple build toolchain, prerequisites, codesigning configuration, and build commands for compiling and testing Cairn on iPadOS.
 
 ---
 
 ## 1. Prerequisites & Toolchain Setup
 
-To compile and run LearnHarness on iPadOS (Simulator or physical iPad hardware), the following tools are required on a macOS host:
+To compile and run Cairn on iPadOS (Simulator or physical iPad hardware), the following tools are required on a macOS host:
 
 ### System & Apple Tools
 - **macOS Sonoma (14.0+) or Sequoia (15.0+)** running on Apple Silicon or Intel.
@@ -84,10 +84,10 @@ iOS requires all binaries to be codesigned by an Apple Developer Team before ins
    ```
 
 ### Bundle Identifier & Deep Linking
-- **Bundle Identifier:** `com.hwacha.learnharness`
-- **URL Scheme:** `learnharness`
+- **Bundle Identifier:** `com.hwacha.cairn`
+- **URL Scheme:** `cairn`
   - On desktop, OAuth redirects use a local loopback server (`http://127.0.0.1:port/callback`).
-  - On iPadOS, local loopback sockets trigger iOS Local Network permission dialogs. LearnHarness uses custom deep-link URI `learnharness://auth/callback` to seamlessly complete OAuth without socket listeners.
+  - On iPadOS, local loopback sockets trigger iOS Local Network permission dialogs. Cairn uses custom deep-link URI `cairn://auth/callback` to seamlessly complete OAuth without socket listeners.
 
 ---
 
@@ -100,7 +100,7 @@ Scaffold the native Apple project inside `src-tauri/gen/apple`:
 ```bash
 npx tauri ios init
 ```
-This generates `src-tauri/gen/apple/learnharness.xcodeproj` using `xcodegen` and installs CocoaPods dependencies.
+This generates `src-tauri/gen/apple/cairn.xcodeproj` using `xcodegen` and installs CocoaPods dependencies.
 
 ### 2. Run in Simulator or Connected iPad
 Launch the dev server and run the app in an iPad simulator:
@@ -127,7 +127,7 @@ The compiled output is placed in `src-tauri/gen/apple/build/`.
 
 ## 5. iPadOS UX & Safe-Area Architecture
 
-When running on iPadOS (`.lh-ios`), LearnHarness adapts its interface:
+When running on iPadOS (`.lh-ios`), Cairn adapts its interface:
 
 1. **Viewport & Scroll Containment:**
    - `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />`

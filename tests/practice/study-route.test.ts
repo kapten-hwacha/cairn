@@ -1,6 +1,6 @@
 /**
  * /api/study (docs/designs/study-time.md): app/api/study/route.ts against a
- * temp LH_DATA_DIR — body/query validation, status mapping, no-store.
+ * temp CAIRN_DATA_DIR — body/query validation, status mapping, no-store.
  */
 
 import assert from "node:assert/strict";
@@ -11,7 +11,7 @@ import { after, beforeEach, describe, it } from "node:test";
 import { resetMemoryStores } from "../../src/store/memory-backend.ts";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-study-route-"));
-process.env.LH_DATA_DIR = dir;
+process.env.CAIRN_DATA_DIR = dir;
 const { GET, POST } = await import("../../app/api/study/route.ts");
 const { stores } = await import("../../src/server/stores.ts");
 const { newUserMessage } = await import("../../src/core/native-messages.ts");

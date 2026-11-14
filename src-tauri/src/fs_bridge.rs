@@ -34,32 +34,32 @@ pub struct DirEntryResult {
 
 pub fn resolve_app_dirs(app: &tauri::AppHandle) -> (PathBuf, PathBuf, PathBuf) {
     use tauri::Manager;
-    let mut user_data_dir = if let Ok(path) = std::env::var("LH_USER_DATA_DIR") {
+    let mut user_data_dir = if let Ok(path) = std::env::var("CAIRN_USER_DATA_DIR") {
         PathBuf::from(path)
     } else {
         app.path()
             .app_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("LearnHarness"))
+            .unwrap_or_else(|_| PathBuf::from("Cairn"))
     };
 
-    if cfg!(debug_assertions) || std::env::var("LH_DEV").is_ok() {
+    if cfg!(debug_assertions) || std::env::var("CAIRN_DEV").is_ok() {
         let parent = user_data_dir.parent().unwrap_or(Path::new("."));
         let name = user_data_dir
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("LearnHarness");
+            .unwrap_or("Cairn");
         if !name.ends_with("-dev") {
             user_data_dir = parent.join(format!("{name}-dev"));
         }
     }
 
-    let data_dir = if let Ok(env_data) = std::env::var("LH_DATA_DIR") {
+    let data_dir = if let Ok(env_data) = std::env::var("CAIRN_DATA_DIR") {
         PathBuf::from(env_data)
     } else {
         user_data_dir.join("data")
     };
 
-    let auth_file = if let Ok(env_auth) = std::env::var("LH_AUTH_FILE") {
+    let auth_file = if let Ok(env_auth) = std::env::var("CAIRN_AUTH_FILE") {
         PathBuf::from(env_auth)
     } else {
         user_data_dir.join("auth.json")
@@ -171,10 +171,10 @@ fn is_credential_or_temp_file(file_path: &Path, auth_file: &Path, canonical_auth
         let lower = file_name.to_ascii_lowercase();
         if lower == "auth.json"
             || lower.ends_with("-credentials.json")
-            || lower == "learnharness.db"
-            || lower == "learnharness.db-wal"
-            || lower == "learnharness.db-shm"
-            || lower == "learnharness.db-journal"
+            || lower == "cairn.db"
+            || lower == "cairn.db-wal"
+            || lower == "cairn.db-shm"
+            || lower == "cairn.db-journal"
         {
             return true;
         }
@@ -241,7 +241,7 @@ fn load_settings(data_dir: &Path) -> Option<serde_json::Value> {
     }
 
     for dir in dirs_to_check {
-        let db_path = dir.join("learnharness.db");
+        let db_path = dir.join("cairn.db");
         if db_path.exists() {
             if let Ok(conn) = rusqlite::Connection::open_with_flags(
                 &db_path,
@@ -777,7 +777,7 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ));
-        let data_dir = base.join("LearnHarness");
+        let data_dir = base.join("Cairn");
         let user_data_dir = base.join("user_data");
         let auth_file = user_data_dir.join("auth.json");
         fs::create_dir_all(&data_dir).unwrap();
@@ -906,7 +906,7 @@ mod tests {
         )
         .is_err());
 
-        let sqlite_db = user_data_dir.join("learnharness.db");
+        let sqlite_db = user_data_dir.join("cairn.db");
         fs::write(&sqlite_db, "SQLite format 3").unwrap();
         assert!(validate_external_read_path(
             sqlite_db.to_str().unwrap(),
@@ -1042,7 +1042,7 @@ mod tests {
         fs::write(&sub_doc, "# Chapter").unwrap();
 
         // 1. Create SQLite DB with settings in kv_documents
-        let db_path = user_data_dir.join("learnharness.db");
+        let db_path = user_data_dir.join("cairn.db");
         let mut conn = rusqlite::Connection::open(&db_path).unwrap();
         crate::storage::schema::init_schema(&mut conn).unwrap();
         let settings = serde_json::json!({
@@ -1113,8 +1113,8 @@ mod tests {
         });
         fs::write(data_dir.join("settings.json"), legacy_settings.to_string()).unwrap();
 
-        // Write SQLite settings in user_data_dir/learnharness.db allowing only `allowed_in_sqlite`
-        let db_path = user_data_dir.join("learnharness.db");
+        // Write SQLite settings in user_data_dir/cairn.db allowing only `allowed_in_sqlite`
+        let db_path = user_data_dir.join("cairn.db");
         let mut conn = rusqlite::Connection::open(&db_path).unwrap();
         crate::storage::schema::init_schema(&mut conn).unwrap();
         let sqlite_settings = serde_json::json!({

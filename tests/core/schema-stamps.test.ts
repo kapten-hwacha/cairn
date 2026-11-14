@@ -6,7 +6,7 @@
  * Honest refusal: records stamped NEWER than this build are refused on
  * read (the downgrade scenario) — never misparsed, never rewritten.
  *
- * Runs under an isolated LH_DATA_DIR (the chat-birth-stamp discipline:
+ * Runs under an isolated CAIRN_DATA_DIR (the chat-birth-stamp discipline:
  * the seam is set before any config-loading import, so every app-module
  * import is dynamic).
  */

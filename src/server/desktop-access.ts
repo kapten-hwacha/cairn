@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 
-/** Validates that a Host header belongs to a trusted local/LAN address or `LH_ALLOWED_HOSTS`. */
+/** Validates that a Host header belongs to a trusted local/LAN address or `CAIRN_ALLOWED_HOSTS`. */
 export function isAllowedLocalHost(
 	hostHeader: string,
 	env: Record<string, string | undefined> = process.env,
@@ -43,7 +43,7 @@ export function isAllowedLocalHost(
 		}
 	}
 
-	const rawAllowed = env.LH_ALLOWED_HOSTS;
+	const rawAllowed = env.CAIRN_ALLOWED_HOSTS;
 	if (rawAllowed) {
 		const allowed = rawAllowed
 			.split(",")
@@ -119,12 +119,12 @@ export function desktopAPIAuthorized(
 	env: Record<string, string | undefined> = process.env,
 	url?: string,
 ): boolean {
-	const expected = env.LH_DESKTOP_API_SECRET;
-	if (env.LH_DESKTOP_SERVER !== "1" && !expected) {
+	const expected = env.CAIRN_DESKTOP_API_SECRET;
+	if (env.CAIRN_DESKTOP_SERVER !== "1" && !expected) {
 		return sameOriginAuthorized(headers, url, env);
 	}
 	if (!expected || expected.length < 64) return false;
-	const supplied = headers.get("x-learnharness-desktop");
+	const supplied = headers.get("x-cairn-desktop");
 	if (!supplied) return false;
 	const actual = Buffer.from(supplied);
 	const wanted = Buffer.from(expected);

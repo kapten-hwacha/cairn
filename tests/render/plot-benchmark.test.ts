@@ -140,7 +140,7 @@ test("CLI accepts independent model/thinking overrides without changing source s
 test("profile reads SQLite settings and overrides without mutating the database or exposing invalid credentials", async () => {
   const dir = tmp();
   try {
-    const dbFile = path.join(dir, "learnharness.db");
+    const dbFile = path.join(dir, "cairn.db");
     const db = new DatabaseSync(dbFile);
     db.exec(
       "CREATE TABLE kv_documents (key TEXT PRIMARY KEY, value_json TEXT); CREATE TABLE prompt_overrides (segment_path TEXT PRIMARY KEY, content TEXT)",

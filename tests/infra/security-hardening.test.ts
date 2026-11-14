@@ -5,7 +5,7 @@ import path from "node:path";
 import { after, describe, it } from "node:test";
 
 const TMP_DATA = fs.mkdtempSync(path.join(os.tmpdir(), "lh-sec-hardening-"));
-process.env.LH_DATA_DIR = TMP_DATA;
+process.env.CAIRN_DATA_DIR = TMP_DATA;
 
 const { POST: postQuaderno } = await import("../../app/api/quaderno/route.ts");
 const { PUT: putPrompt } = await import("../../app/api/settings/prompts/[...segment]/route.ts");

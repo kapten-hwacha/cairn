@@ -17,9 +17,9 @@ const log = fs.openSync(path.join(out, "native.log"), "w");
 const child = spawn(binary, [], {
   env: {
     ...process.env,
-    LH_USER_DATA_DIR: userDir,
-    LH_DATA_DIR: dataDir,
-    LH_AUTH_FILE: path.join(isolated, "auth.json"),
+    CAIRN_USER_DATA_DIR: userDir,
+    CAIRN_DATA_DIR: dataDir,
+    CAIRN_AUTH_FILE: path.join(isolated, "auth.json"),
   },
   stdio: ["ignore", log, log],
 });

@@ -15,7 +15,7 @@ first baseline explicitly selects `deepseek:deepseek-flash` with high thinking.
 
 ## Repository findings
 
-The handoff's storage description is outdated. Current desktop adapters use SQLite, while Node uses `src/store/memory-backend.ts`. The development profile database is `/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev/learnharness.db`; settings are the `settings` entry in `kv_documents`, and prompt overrides are in `prompt_overrides`. Credentials are in the sibling `auth.json`. Legacy `data/settings.json` files must not select the benchmark configuration.
+The handoff's storage description is outdated. Current desktop adapters use SQLite, while Node uses `src/store/memory-backend.ts`. The development profile database is `/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev/cairn.db`; settings are the `settings` entry in `kv_documents`, and prompt overrides are in `prompt_overrides`. Credentials are in the sibling `auth.json`. Legacy `data/settings.json` files must not select the benchmark configuration.
 
 `src/server/chat-handler.ts` builds the production teacher and wires `createJobRunner` to `deliverJobResult`. A successful, matching `probe_done` call/result selects the teacher. Worker completion, accepted delivery in the saved conversation, and an artifact in `projectView` are separate observations. Node's in-memory acceptance tests application delivery semantics, not SQLite crash durability.
 
@@ -90,7 +90,7 @@ The fixture stores these exact prompts and expands the expectations below into i
 Initial live baseline:
 
 ```sh
-npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev" --repetitions 1
+npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev" --repetitions 1
 ```
 
 Options: `--profile-dir <dir>` (required for live runs), `--cases <fixture.json>` (defaults to the versioned fixture), `--case <id>` (repeatable selection), `--repetitions <positive integer>` (default 1), `--timeout-ms <positive integer>` (default 120000), `--out <new-directory>` (default `data/plot-benchmark/<UTC timestamp>-<random suffix>`), and `--report-only <existing-run-directory>` (no profile or model calls). Refuse an existing live output directory to avoid overwriting evidence. Unknown options, invalid values and unknown IDs fail before network access.
@@ -115,7 +115,7 @@ npm exec -- eslint --no-ignore --fix scripts/plot-benchmark.ts scripts/plot-benc
 npm exec -- prettier --check scripts/plot-benchmark.ts scripts/plot-benchmark tests/plot-benchmark.test.ts tests/plot-benchmark-flow.test.ts tests/fixtures/plot-benchmark/cases.json
 npm run typecheck
 NODE_ENV=test node --experimental-sqlite --import tsx --test tests/plot-benchmark.test.ts tests/plot-benchmark-flow.test.ts tests/plot.test.ts tests/demos.test.tsx tests/jobs.test.ts tests/pending.test.ts
-npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev" --repetitions 1
+npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev" --repetitions 1
 ```
 
 Passing checks establish harness behavior and observable delivery. The baseline report supplies artifacts and independent expectations for the user's numerical/visual review. It does not establish platform UI behavior, storage crash recovery, model stability from one trial, or visual correctness before review.
@@ -156,7 +156,7 @@ npm exec -- prettier --check tests/plot-tool-schema.test.ts tests/plot-benchmark
 npm run typecheck
 NODE_ENV=test node --experimental-sqlite --import tsx --test tests/plot-tool-schema.test.ts tests/plot-benchmark.test.ts tests/plot-benchmark-flow.test.ts tests/plot.test.ts tests/demos.test.tsx tests/jobs.test.ts tests/pending.test.ts
 git diff --check
-npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev" --model deepseek:deepseek-flash --thinking high --repetitions 1
+npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev" --model deepseek:deepseek-flash --thinking high --repetitions 1
 ```
 
 Follow-up verification completed on 2026-11-12: the two schema regressions

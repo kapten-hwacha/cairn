@@ -39,7 +39,7 @@ export function proxy(request: NextRequest) {
 	}
 	if (!desktopAPIAuthorized(request.headers, process.env, request.url)) {
 		return NextResponse.json(
-			{ error: "Desktop API access requires the trusted LearnHarness window." },
+			{ error: "Desktop API access requires the trusted Cairn window." },
 			{ status: 403, headers: { "Cache-Control": "no-store" } },
 		);
 	}

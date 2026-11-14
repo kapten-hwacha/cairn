@@ -86,8 +86,8 @@ runtime string was separately formatted, linted and syntax-checked as JavaScript
 then executed in WKWebView. Generated assets use byte-identical rebuild checks.
 No model or external provider call was needed for these checks.
 
-The smoke uses a separate app identifier and fresh `LH_USER_DATA_DIR`,
-`LH_DATA_DIR`, `LH_AUTH_FILE` paths. It does not mount normal chat or use the
+The smoke uses a separate app identifier and fresh `CAIRN_USER_DATA_DIR`,
+`CAIRN_DATA_DIR`, `CAIRN_AUTH_FILE` paths. It does not mount normal chat or use the
 learner's data/credentials. Its runner terminates only its own child process.
 
 ## Rebuild
@@ -99,9 +99,9 @@ node --import tsx scripts/build-plot3d-vendor.ts --build-dir /private/tmp/lh-plo
 node --import tsx scripts/build-plot3d-vendor.ts --build-dir /private/tmp/lh-plotly-fresh --check
 
 node node_modules/@tauri-apps/cli/tauri.js build --config src-tauri/tauri.plot3d-smoke.conf.json --no-bundle --ci
-node --import tsx scripts/plot3d-tauri-smoke.ts --binary src-tauri/target/release/learnharness --out /private/tmp/lh-plot3d-smoke
+node --import tsx scripts/plot3d-tauri-smoke.ts --binary src-tauri/target/release/cairn --out /private/tmp/lh-plot3d-smoke
 npm run desktop:dist
-hdiutil verify src-tauri/target/release/bundle/dmg/LearnHarness_0.5.0_aarch64.dmg
+hdiutil verify src-tauri/target/release/bundle/dmg/Cairn_0.5.0_aarch64.dmg
 ```
 
 The final normal build must follow the smoke build because both use the same
@@ -112,11 +112,11 @@ script assets; the smoke entry and synthetic WebGL-failure asset are excluded.
 
 `npm run desktop:dist` completed successfully. Outputs:
 
-- `src-tauri/target/release/bundle/macos/LearnHarness.app` — ARM64, 26.93 MiB.
-- `src-tauri/target/release/bundle/dmg/LearnHarness_0.5.0_aarch64.dmg` — 17.22 MiB;
+- `src-tauri/target/release/bundle/macos/Cairn.app` — ARM64, 26.93 MiB.
+- `src-tauri/target/release/bundle/dmg/Cairn_0.5.0_aarch64.dmg` — 17.22 MiB;
   `hdiutil verify` reports a valid checksum (`CRC32 564365A7`).
 
-The packaged identifier is `com.hwacha.learnharness`. Both trusted rendering
+The packaged identifier is `com.hwacha.cairn`. Both trusted rendering
 script assets match the native-tested build byte-for-byte, and their CSP hashes
 are present in the packaged executable. The smoke command/entry and synthetic
 WebGL-failure asset are absent from production assets. Exact asset, executable

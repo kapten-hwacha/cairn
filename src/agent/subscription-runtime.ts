@@ -16,7 +16,7 @@ export function configureWebSubscriptionRuntime(request: NonNullable<Runtime["re
 export function configureNativeChatGPTFetch(fetcher: NonNullable<Runtime["nativeFetch"]>): void { runtime().nativeFetch = fetcher; }
 export function nativeChatGPTFetch(): Runtime["nativeFetch"] { return runtime().nativeFetch; }
 export function webSubscriptionsEnabled(): boolean {
-	return process.env.LH_DESKTOP_SERVER !== "1" && !process.env.LH_DESKTOP_API_SECRET && !!runtime().request;
+	return process.env.CAIRN_DESKTOP_SERVER !== "1" && !process.env.CAIRN_DESKTOP_API_SECRET && !!runtime().request;
 }
 export function onWebSubscriptionPacket(channel: SubscriptionRuntimeChannel, listener: (packet: SubscriptionRuntimePacket) => void): void {
 	const state = runtime(); const listeners = state.listeners.get(channel) ?? new Set();

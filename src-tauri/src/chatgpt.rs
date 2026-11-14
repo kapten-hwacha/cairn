@@ -83,7 +83,7 @@ fn make_login_attempt(
         let mut query = authorization_url.query_pairs_mut();
         query.append_pair("client_id", client_id);
         if selected.is_none() {
-            query.append_pair("agent_name_hint", "LearnHarness");
+            query.append_pair("agent_name_hint", "Cairn");
         }
         query.append_pair("ext_agent_host_id", host_id);
         if let Some(id_token) = selected
@@ -1522,7 +1522,7 @@ impl ChatGptOwner {
             let (status, message) = if parsed.is_some() {
                 (
                     "200 OK",
-                    "Return to LearnHarness to view the sign-in result. You may close this tab.",
+                    "Return to Cairn to view the sign-in result. You may close this tab.",
                 )
             } else {
                 ("400 Bad Request", "Sign-in could not be verified.")

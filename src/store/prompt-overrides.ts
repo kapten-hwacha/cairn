@@ -17,7 +17,7 @@ import {
 } from "./memory-backend.ts";
 
 function getPromptOverrideCache(): Map<string, string | null> {
-	return ((globalThis as any).__LH_PROMPT_OVERRIDE_CACHE__ ??= new Map<string, string | null>());
+	return ((globalThis as any).__CAIRN_PROMPT_OVERRIDE_CACHE__ ??= new Map<string, string | null>());
 }
 
 export const promptOverrides: PromptOverrideStore = {

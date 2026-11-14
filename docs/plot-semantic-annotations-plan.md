@@ -148,7 +148,7 @@ NODE_ENV=test node --import tsx --test tests/plot-worker.test.ts
 npm run vite:build
 git diff --check
 node --import tsx scripts/plot-render-review.ts --run data/plot-benchmark/2026-11-12T20-43-09-465Z-7e337843 --out data/plot-render-review/semantic-annotations-v1 --variants tests/fixtures/plot-annotations/review-variants.json
-npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev" --model deepseek:deepseek-flash --thinking high --case 10-narrow-peak --repetitions 1
+npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev" --model deepseek:deepseek-flash --thinking high --case 10-narrow-peak --repetitions 1
 ```
 
 Inspect the deterministic PNGs and the single fresh live run's actual input,

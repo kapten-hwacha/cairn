@@ -1,7 +1,7 @@
 /**
  * Direct Node.js SQLite backend for `npm run dev` (Next.js dev server),
  * allowing remote clients (such as the iPadOS Simulator in dev mode) to
- * read and write the Mac Tauri app's `learnharness.db` directly.
+ * read and write the Mac Tauri app's `cairn.db` directly.
  *
  * Disabled automatically when `NODE_ENV === "test"`, in browser/Web Worker
  * contexts, or when the database file does not exist on disk.
@@ -769,10 +769,10 @@ export function getSqliteBackend(): Promise<SqliteStoreBackend | null> {
 				os.homedir(),
 				"Library",
 				"Application Support",
-				"com.hwacha.learnharness",
-				"learnharness.db",
+				"com.hwacha.cairn",
+				"cairn.db",
 			);
-			const dbPath = process.env.LH_SQLITE_DB ? path.resolve(process.env.LH_SQLITE_DB) : defaultMacDb;
+			const dbPath = process.env.CAIRN_SQLITE_DB ? path.resolve(process.env.CAIRN_SQLITE_DB) : defaultMacDb;
 			if (!fs.existsSync(dbPath)) return null;
 			try {
 				fs.chmodSync(dbPath, 0o600);

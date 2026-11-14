@@ -15,11 +15,11 @@ import nextConfig from "../../next.config.ts";
 
 const dom = parseHTML("<html><body></body></html>");
 Object.assign(globalThis, { window: dom.window, document: dom.document, CustomEvent: dom.window.CustomEvent });
-process.env.LH_VERSION = "0.3.7";
-process.env.LH_HOMEPAGE = "https://github.com/amosblomqvist/learnharness";
+process.env.CAIRN_VERSION = "0.3.7";
+process.env.CAIRN_HOMEPAGE = "https://github.com/amosblomqvist/cairn";
 const originalFetch = globalThis.fetch;
 const roots: { root: Root; host: HTMLElement }[] = [];
-const props = { version: "0.3.7", homepage: "https://github.com/amosblomqvist/learnharness" };
+const props = { version: "0.3.7", homepage: "https://github.com/amosblomqvist/cairn" };
 const q = (host: ParentNode, id: string) => host.querySelector<HTMLElement>(`[data-testid='${id}']`);
 
 async function mount(element: React.ReactElement) {
@@ -41,7 +41,7 @@ afterEach(async () => {
 describe("version and contextual copy", () => {
 	it("build metadata comes from package.json and exposes only public version/homepage values", () => {
 		const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
-		assert.deepEqual(nextConfig.env, { LH_VERSION: pkg.version, LH_HOMEPAGE: pkg.homepage });
+		assert.deepEqual(nextConfig.env, { CAIRN_VERSION: pkg.version, CAIRN_HOMEPAGE: pkg.homepage });
 	});
 });
 

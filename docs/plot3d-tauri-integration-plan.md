@@ -276,8 +276,8 @@ Add an explicit smoke Vite mode/output directory in `vite.config.ts` and a
 build-gated direct-render request in `src/worker/entry.ts`. The smoke entry
 bypasses normal chat/teacher dispatch.
 
-Use a separate app identifier, an incognito smoke window, fresh `LH_USER_DATA_DIR`,
-`LH_DATA_DIR` and `LH_AUTH_FILE` paths. No real chat database, credentials or
+Use a separate app identifier, an incognito smoke window, fresh `CAIRN_USER_DATA_DIR`,
+`CAIRN_DATA_DIR` and `CAIRN_AUTH_FILE` paths. No real chat database, credentials or
 model calls. A temporary native window exercises the real WKWebView/worker.
 Write PNG/base64 evidence and completion JSON through existing `lh_debug_write`;
 the outer Node runner waits up to 120 seconds, checks every assertion and exits
@@ -316,9 +316,9 @@ npm exec -- eslint --no-ignore --fix scripts/build-plot3d-vendor.ts scripts/plot
 npm run typecheck
 npm run vite:build
 node node_modules/@tauri-apps/cli/tauri.js build --config src-tauri/tauri.plot3d-smoke.conf.json --no-bundle --ci
-node --import tsx scripts/plot3d-tauri-smoke.ts --binary src-tauri/target/release/learnharness --out /private/tmp/learnharness-plot3d-tauri-smoke-01
+node --import tsx scripts/plot3d-tauri-smoke.ts --binary src-tauri/target/release/cairn --out /private/tmp/cairn-plot3d-tauri-smoke-01
 npm run desktop:dist
-hdiutil verify src-tauri/target/release/bundle/dmg/LearnHarness_0.5.0_aarch64.dmg
+hdiutil verify src-tauri/target/release/bundle/dmg/Cairn_0.5.0_aarch64.dmg
 git diff --check
 ```
 

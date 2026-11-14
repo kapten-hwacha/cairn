@@ -76,7 +76,7 @@
 					el.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e1e;color:#ff5555;z-index:999999;padding:24px;font-family:monospace;white-space:pre-wrap;overflow:auto;font-size:14px;line-height:1.4;";
 					(document.body || document.documentElement).appendChild(el);
 				}
-				el.textContent = "LearnHarness Boot Error:\n\n" + msg;
+				el.textContent = "Cairn Boot Error:\n\n" + msg;
 			});
 			window.addEventListener("unhandledrejection", function (e) {
 				var msg = e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : String(e);
@@ -95,7 +95,7 @@
 					el.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e1e;color:#ff5555;z-index:999999;padding:24px;font-family:monospace;white-space:pre-wrap;overflow:auto;font-size:14px;line-height:1.4;";
 					(document.body || document.documentElement).appendChild(el);
 				}
-				el.textContent = "LearnHarness Boot Unhandled Rejection:\n\n" + msg;
+				el.textContent = "Cairn Boot Unhandled Rejection:\n\n" + msg;
 			});
 		</script>
 	</head>

@@ -6,15 +6,15 @@ import { after, beforeEach, it } from "node:test";
 import type { GraphNode, SourceDirectory } from "../../src/core/index.ts";
 import { resetMemoryStores, getMemoryKv, setRawMemoryKv } from "../../src/store/memory-backend.ts";
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "lh-source-deletion-"));
-process.env.LH_DATA_DIR = root; process.env.LH_AUTH_FILE = path.join(root, "auth.json");
-fs.writeFileSync(process.env.LH_AUTH_FILE, "{}\n");
+process.env.CAIRN_DATA_DIR = root; process.env.CAIRN_AUTH_FILE = path.join(root, "auth.json");
+fs.writeFileSync(process.env.CAIRN_AUTH_FILE, "{}\n");
 const { DELETE } = await import("../../app/api/graph/sources/route.ts");
 const { stores } = await import("../../src/server/stores.ts");
 const { sourceDirectory } = await import("../../src/server/source-organization.ts");
 const { beginTurn, endTurn } = await import("../../src/server/turn-liveness.ts");
 const { sessionCoverage } = await import("../../src/server/chats.ts");
 const { coverageSlots } = await import("../../src/core/coverage.ts");
-beforeEach(() => { resetMemoryStores(); fs.rmSync(root, { recursive: true, force: true }); fs.mkdirSync(root); fs.writeFileSync(process.env.LH_AUTH_FILE!, "{}\n"); });
+beforeEach(() => { resetMemoryStores(); fs.rmSync(root, { recursive: true, force: true }); fs.mkdirSync(root); fs.writeFileSync(process.env.CAIRN_AUTH_FILE!, "{}\n"); });
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const remove = (sourceIds: string[], folderIds: string[] = [], deleteSessions = false) => DELETE(new Request("http://localhost/api/graph/sources", { method: "DELETE", body: JSON.stringify({ sourceIds, folderIds, deleteSessions }) }));
 async function book(id: string) { await stores.graphStore.upsertSource({ id, filePath: `${id}.md`, importedAt: "2026-10-30" }); }

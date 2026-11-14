@@ -330,7 +330,7 @@ describe("promptOverrides (memory-backend)", () => {
 		assert.deepEqual(await promptOverrides.listOverrides(), ["teacher/20-teaching.md"]);
 
 		// Global override cache updated
-		const cache = (globalThis as any).__LH_PROMPT_OVERRIDE_CACHE__;
+		const cache = (globalThis as any).__CAIRN_PROMPT_OVERRIDE_CACHE__;
 		assert.equal(cache?.get("teacher/20-teaching.md"), "custom teacher prompt");
 
 		await promptOverrides.deleteOverride("teacher/20-teaching.md");

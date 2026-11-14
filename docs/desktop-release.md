@@ -15,7 +15,7 @@ Package targets, permissions, window configuration, and updater settings live in
 
 The custom app bar stays across platforms. macOS uses left-side native window buttons (`titleBarStyle: "Overlay"` in `tauri.conf.json`). Windows/Linux use native window decorations or client controls as configured.
 
-Icons are per-platform: macOS compiles `build/icon.icon` / uses `build/icon.icns`; Windows embeds `build/icon.ico` and Linux uses `build/icon.png`. Linux's desktop identity is `ai.learnharness.desktop`.
+Icons are per-platform: macOS compiles `build/icon.icon` / uses `build/icon.icns`; Windows embeds `build/icon.ico` and Linux uses `build/icon.png`. Linux's desktop identity is `ai.cairn.desktop`.
 
 ## Build commands
 
@@ -31,6 +31,6 @@ npm run desktop:dist   # runs "tauri build"
 
 ## In-app updates
 
-Updates are managed via `tauri-plugin-updater` pointing to GitHub Releases for `kapten-hwacha/learnharness` (upstream releases at `amosblomqvist/learnharness`).
+Updates are managed via `tauri-plugin-updater` pointing to GitHub Releases for `kapten-hwacha/cairn` (upstream releases at `amosblomqvist/cairn`).
 
 Packaged apps check at startup and every 24 hours by default (when `autoUpdate` is not set to `false` in `settings.json`), download available updates, and prompt to restart. **Settings → General** displays update status, manual check, and automatic update toggle. Development builds report updater as disabled.

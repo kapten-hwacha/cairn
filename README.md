@@ -2,28 +2,27 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lh_banner_dark.png">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/lh_banner_light.png">
-    <img src="docs/assets/lh_banner_light.png" alt="LearnHarness" width="640">
+    <img src="docs/assets/lh_banner_light.png" alt="Cairn" width="640">
   </picture>
 </p>
 
 <p align="center"><strong>An agent harness for learning.</strong></p>
 
 > [!NOTE]
-> This repository is a fork maintained by [kapten-hwacha](https://github.com/kapten-hwacha/learnharness), based on the original [LearnHarness](https://github.com/amosblomqvist/learnharness) created by [Amos Blomqvist](https://github.com/amosblomqvist).
+> This repository is maintained by [kapten-hwacha](https://github.com/kapten-hwacha/cairn), based on the original [LearnHarness](https://github.com/amosblomqvist/learnharness) created by [Amos Blomqvist](https://github.com/amosblomqvist).
 
 <p align="center">
-  <a href="https://learnharness.ai">Download</a> ·
+  <a href="https://github.com/kapten-hwacha/cairn/releases">Releases</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="docs/README.md">Documentation</a> ·
-  <a href="https://github.com/kapten-hwacha/learnharness/issues">Issues</a> ·
-  <a href="https://discord.gg/5tCHHQEB2e">Discord</a>
+  <a href="https://github.com/kapten-hwacha/cairn/issues">Issues</a>
 </p>
 
-LearnHarness uses AI agents to plan and teach lessons from your current understanding to your goal. It builds a detailed picture of what you understand and how you reason. That picture is updated as you learn.
+Cairn uses AI agents to plan and teach lessons from your current understanding to your goal. It builds a detailed picture of what you understand and how you reason. That picture is updated as you learn.
 
 Instead of just giving you an explanation, it uses your answers and thinking to decide what you need next. Teaching builds understanding one reasoning step at a time. Practice makes it usable. A persistent knowledge graph carries it across sessions.
 
-![LearnHarness teaching session](docs/assets/teaching-session.png)
+![Cairn teaching session](docs/assets/teaching-session.png)
 
 ## How it works
 
@@ -44,11 +43,11 @@ What you are taught accumulates as propositions and reasoning chains: individual
 
 Future teaching sessions can read the graph instead of starting from scratch. Practice sessions can draw their material from it. It stores the ideas and their connections, not ratings of your ability.
 
-![LearnHarness knowledge graph](docs/assets/knowledge-graph.png)
+![Cairn knowledge graph](docs/assets/knowledge-graph.png)
 
 ## Download and get started
 
-**[Download from learnharness.ai](https://learnharness.ai)** · [Fork Releases](https://github.com/kapten-hwacha/learnharness/releases) · [Upstream Releases](https://github.com/amosblomqvist/learnharness/releases)
+**[Releases](https://github.com/kapten-hwacha/cairn/releases)** · [Upstream LearnHarness Releases](https://github.com/amosblomqvist/learnharness/releases)
 
 *(Note: Desktop packaging and release/signing are currently being migrated to Tauri 2; release binaries for the Tauri desktop shell are in progress.)*
 
@@ -64,7 +63,7 @@ All three platforms support in-app updates.
 
 ## Your keys, your data
 
-- **Your keys and models.** No LearnHarness subscription or markup. Billing depends on your provider, CLI configuration, subscription, or local setup. The live cost meter estimates known API costs, not subscription, CLI, or custom-endpoint charges.
+- **Your keys and models.** No Cairn subscription or markup. Billing depends on your provider, CLI configuration, subscription, or local setup. The live cost meter estimates known API costs, not subscription, CLI, or custom-endpoint charges.
 - **Local storage.** Your chats, graph, settings, and API keys live on your machine. Learning records are plain files you can inspect.
 - **External services.** Models run through your configured providers. Model requests send the context needed for the task; web research and dictation also contact external services. Local storage does not mean offline processing.
 - **Inspectable behavior.** System prompts are visible and editable. The app is open source under the AGPL-3.0 license.
@@ -80,7 +79,7 @@ npm test            # fixtures and fake providers
 
 See the [documentation index](docs/README.md) for all guides, [development](docs/development.md) for setup and checks, [architecture](docs/architecture.md) for the runtime, [keyboard shortcuts](docs/keyboard.md), and [desktop builds and releases](docs/desktop-release.md).
 
-Questions, bug reports, and feature requests: [GitHub Issues](https://github.com/kapten-hwacha/learnharness/issues) (upstream: [amosblomqvist/learnharness](https://github.com/amosblomqvist/learnharness/issues)).
+Questions, bug reports, and feature requests: [GitHub Issues](https://github.com/kapten-hwacha/cairn/issues) (upstream: [amosblomqvist/learnharness](https://github.com/amosblomqvist/learnharness/issues)).
 
 ## License
 

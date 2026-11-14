@@ -7,8 +7,8 @@ import { SEARCH_ENGINES, type SearchEngineId } from "../../src/core/search.ts";
 
 // Real settings/auth composition with fake keys and an injected transport only.
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-search-expansion-"));
-process.env.LH_DATA_DIR = path.join(dir, "data");
-process.env.LH_AUTH_FILE = path.join(dir, "auth.json");
+process.env.CAIRN_DATA_DIR = path.join(dir, "data");
+process.env.CAIRN_AUTH_FILE = path.join(dir, "auth.json");
 for (const { envVar } of SEARCH_ENGINES) delete process.env[envVar];
 const { resetMemoryStores } = await import("../../src/store/memory-backend.ts");
 const { saveKey, deleteKey, keyStatuses } = await import("../../src/server/keys.ts");

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 /** Repository root (this file is at <root>/config.ts). */
 export let ROOT = path.dirname(fileURLToPath(import.meta.url));
 
-let DATA_ROOT = process.env.LH_DATA_DIR
-	? path.resolve(process.env.LH_DATA_DIR)
+let DATA_ROOT = process.env.CAIRN_DATA_DIR
+	? path.resolve(process.env.CAIRN_DATA_DIR)
 	: path.join(ROOT, "data");
 
 export const PATHS = {
@@ -162,7 +162,7 @@ export let PROMPTS_OVERRIDE_DIR = path.join(DATA_ROOT, "prompts");
  * THE AUTH/KEY STORE (auth-keys wave, 2026-09-19): BYOK provider keys in a
  * flat {VAR: value} JSON map — the SAME file the Electron app has always
  * hand-edited (owner decision: option A, zero migration). Desktop main.cjs
- * passes LH_AUTH_FILE pointing at userData/auth.json (mode 0600); in dev
+ * passes CAIRN_AUTH_FILE pointing at userData/auth.json (mode 0600); in dev
  * (no Electron) the default is the repo-root auth.json (gitignored, same
  * pattern as .env.local — a worktree may symlink it to the master copy).
  * The SERVER reads/writes this file directly at call time (no restart to
@@ -172,8 +172,8 @@ export let PROMPTS_OVERRIDE_DIR = path.join(DATA_ROOT, "prompts");
  * re-read from disk on every API access. Secrets NEVER go in settings.json
  * — this file keeps that role, alongside .env.local.
  */
-export let AUTH_FILE = process.env.LH_AUTH_FILE
-	? path.resolve(process.env.LH_AUTH_FILE)
+export let AUTH_FILE = process.env.CAIRN_AUTH_FILE
+	? path.resolve(process.env.CAIRN_AUTH_FILE)
 	: path.join(ROOT, "auth.json");
 
 export function configurePaths(cfg: { root?: string; dataDir?: string; authFile?: string }): void {
@@ -183,13 +183,13 @@ export function configurePaths(cfg: { root?: string; dataDir?: string; authFile?
 	if (cfg.dataDir) {
 		DATA_ROOT = path.resolve(cfg.dataDir);
 		if (typeof process !== "undefined" && process?.env) {
-			process.env.LH_DATA_DIR = DATA_ROOT;
+			process.env.CAIRN_DATA_DIR = DATA_ROOT;
 		}
 	}
 	if (cfg.authFile) {
 		AUTH_FILE = path.resolve(cfg.authFile);
 		if (typeof process !== "undefined" && process?.env) {
-			process.env.LH_AUTH_FILE = AUTH_FILE;
+			process.env.CAIRN_AUTH_FILE = AUTH_FILE;
 		}
 	}
 	SOURCES_FILE = path.join(PATHS.graph, "sources.json");

@@ -15,6 +15,7 @@ concurrency:
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
+  NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
   quality:
@@ -41,42 +42,30 @@ jobs:
             console.log("tauri.ios.conf.json configuration valid");
           '
 
-  standalone:
-    name: Standalone (${{ matrix.platform }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Standard macos-15 runners are Apple Silicon (not macos-15-intel).
-          - os: macos-15
-            platform: mac-arm64
-          - os: windows-2025
-            platform: windows-x64
-          - os: ubuntu-24.04
-            platform: linux-x64
-    runs-on: ${{ matrix.os }}
+  macos:
+    name: macOS & iPadOS checks (macos-15)
+    runs-on: macos-15
     timeout-minutes: 25
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "26"
           cache: npm
+      - name: Setup Rust (macOS + iPadOS target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
       - run: npm ci
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-24.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - name: Native renderer tests on this OS
+      - name: Native renderer tests on macOS
         run: npx tsx --test tests/files/pdf-native-render.test.ts tests/files/pdf-ops.test.ts tests/render/svg-native-render.test.ts tests/infra/browser-service.test.ts
         env:
           NODE_ENV: test
       - run: npm run build
-      # Check the fresh trace before any static copying/curation.
-      - run: node scripts/smoke-provider-runtime.mjs
-      - name: Cargo tests
+      - run: npm run vite:build
+      - name: Check provider runtime smoke
+        run: node scripts/smoke-provider-runtime.mjs
+      - name: Cargo tests (macOS)
         run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Cargo check (iPadOS aarch64-apple-ios)
+        run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios

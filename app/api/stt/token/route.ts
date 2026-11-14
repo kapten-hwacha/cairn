@@ -13,8 +13,7 @@
  * /auth/grant (their docs, token-based auth FAQ) — plain read/transcribe
  * keys return FORBIDDEN here.
  */
-import { keyValue } from "@/src/server";
-import { mintDictationToken } from "@/src/server/stt-token";
+import { keyValue, mintDictationToken } from "@/src/server";
 
 export async function GET() {
 	return mintDictationToken(keyValue("DEEPGRAM_API_KEY"), fetch);

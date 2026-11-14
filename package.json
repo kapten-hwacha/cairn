@@ -1,6 +1,6 @@
 {
-	"name": "learnharness",
-	"version": "0.5.0",
+	"name": "cairn",
+	"version": "0.1.0",
 	"license": "AGPL-3.0-only",
 	"author": {
 		"name": "hwacha",
@@ -12,10 +12,10 @@
 			"email": "255718537+amosblomqvist@users.noreply.github.com"
 		}
 	],
-	"homepage": "https://github.com/kapten-hwacha/learnharness",
+	"homepage": "https://github.com/kapten-hwacha/cairn",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/kapten-hwacha/learnharness.git"
+		"url": "https://github.com/kapten-hwacha/cairn.git"
 	},
 	"description": "An agent harness for learning: adaptive teaching, practice, and a persistent knowledge graph.",
 	"type": "module",
@@ -33,8 +33,8 @@
 		"desktop:dist": "tauri build",
 		"vite:dev": "vite",
 		"vite:build": "vite build",
-		"ios:prep": "npm run vite:build && cargo build --release --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios && mkdir -p src-tauri/gen/apple/Externals/arm64/debug src-tauri/gen/apple/Externals/arm64/release && cp src-tauri/target/aarch64-apple-ios/release/liblearnharness_lib.a src-tauri/gen/apple/Externals/arm64/debug/libapp.a && cp src-tauri/target/aarch64-apple-ios/release/liblearnharness_lib.a src-tauri/gen/apple/Externals/arm64/release/libapp.a",
-		"ios:prep:dev": "VITE_LH_IOS_DEV=1 npm run vite:build && cargo build --release --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios && mkdir -p src-tauri/gen/apple/Externals/arm64/debug && cp src-tauri/target/aarch64-apple-ios/release/liblearnharness_lib.a src-tauri/gen/apple/Externals/arm64/debug/libapp.a",
+		"ios:prep": "npm run vite:build && cargo build --release --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios && mkdir -p src-tauri/gen/apple/Externals/arm64/debug src-tauri/gen/apple/Externals/arm64/release && cp src-tauri/target/aarch64-apple-ios/release/libcairn_lib.a src-tauri/gen/apple/Externals/arm64/debug/libapp.a && cp src-tauri/target/aarch64-apple-ios/release/libcairn_lib.a src-tauri/gen/apple/Externals/arm64/release/libapp.a",
+		"ios:prep:dev": "VITE_CAIRN_IOS_DEV=1 npm run vite:build && cargo build --release --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios && mkdir -p src-tauri/gen/apple/Externals/arm64/debug && cp src-tauri/target/aarch64-apple-ios/release/libcairn_lib.a src-tauri/gen/apple/Externals/arm64/debug/libapp.a",
 		"benchmark:plot": "node --experimental-sqlite --import tsx scripts/plot-benchmark.ts"
 	},
 	"dependencies": {

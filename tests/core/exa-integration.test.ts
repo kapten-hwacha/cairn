@@ -8,8 +8,8 @@ import { resetMemoryStores } from "../../src/store/memory-backend.ts";
 // An isolated store and fake key ensure this exercises the real composition
 // without reading the developer's settings or calling a paid provider.
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-exa-"));
-process.env.LH_DATA_DIR = path.join(dir, "data");
-process.env.LH_AUTH_FILE = path.join(dir, "auth.json");
+process.env.CAIRN_DATA_DIR = path.join(dir, "data");
+process.env.CAIRN_AUTH_FILE = path.join(dir, "auth.json");
 for (const name of ["TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "FIRECRAWL_API_KEY", "OLLAMA_API_KEY"]) delete process.env[name];
 
 const { saveKey, keyStatuses } = await import("../../src/server/keys.ts");

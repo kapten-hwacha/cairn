@@ -7,7 +7,7 @@ import { after, beforeEach, test, mock } from "node:test";
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "lh-custom-boundaries-"));
 const originalEnv = process.env;
 const originalFetch = globalThis.fetch;
-process.env = { ...(originalEnv.NODE_TEST_CONTEXT ? { NODE_TEST_CONTEXT: originalEnv.NODE_TEST_CONTEXT } : {}), ...(originalEnv.NODE_OPTIONS ? { NODE_OPTIONS: originalEnv.NODE_OPTIONS } : {}), NODE_ENV: "test", HOME: scratch, LH_DATA_DIR: scratch, LH_AUTH_FILE: path.join(scratch, "auth.json"), LH_IGNORE_ENV_KEYS: "1" };
+process.env = { ...(originalEnv.NODE_TEST_CONTEXT ? { NODE_TEST_CONTEXT: originalEnv.NODE_TEST_CONTEXT } : {}), ...(originalEnv.NODE_OPTIONS ? { NODE_OPTIONS: originalEnv.NODE_OPTIONS } : {}), NODE_ENV: "test", HOME: scratch, CAIRN_DATA_DIR: scratch, CAIRN_AUTH_FILE: path.join(scratch, "auth.json"), CAIRN_IGNORE_ENV_KEYS: "1" };
 const route = await import("../../app/api/custom-provider/route.ts");
 const keys = await import("../../src/server/keys.ts");
 const { authEnvRecord } = await import("../../src/core/auth-env.ts");
@@ -41,8 +41,8 @@ let requests: { url: string; authorization: string | null }[];
 beforeEach(async () => {
 	mock.restoreAll();
 	resetMemoryStores();
-	process.env.LH_IGNORE_ENV_KEYS = "1";
-	delete process.env.LH_DESKTOP_SERVER; delete process.env.LH_DESKTOP_API_SECRET;
+	process.env.CAIRN_IGNORE_ENV_KEYS = "1";
+	delete process.env.CAIRN_DESKTOP_SERVER; delete process.env.CAIRN_DESKTOP_API_SECRET;
 	setMemoryAuthContent("{}");
 	await seed();
 	requests = [];
@@ -84,13 +84,13 @@ test("actual GET /api/keys fully redacts every custom key length and preserves o
 			assert.ok(!JSON.stringify(custom).includes(value));
 			assert.deepEqual(statuses.find(row => row.id === "OPENAI_API_KEY"), ordinary);
 		}
-		process.env.LH_IGNORE_ENV_KEYS = "0";
+		process.env.CAIRN_IGNORE_ENV_KEYS = "0";
 		process.env[CUSTOM_PROVIDER.envVar] = "765"; authEnvRecord().realEnv.add(CUSTOM_PROVIDER.envVar);
 		const custom = (await rows()).find(row => row.id === CUSTOM_PROVIDER.envVar)!;
 		assert.equal(custom.masked, "••••"); assert.equal(custom.source, "env"); assert.equal(custom.present, true); assert.equal(custom.shadowedByEnv, true);
 		assert.ok(!JSON.stringify(custom).includes("765"));
 	} finally {
-		authEnvRecord().realEnv.delete(CUSTOM_PROVIDER.envVar); delete process.env[CUSTOM_PROVIDER.envVar]; process.env.LH_IGNORE_ENV_KEYS = "1";
+		authEnvRecord().realEnv.delete(CUSTOM_PROVIDER.envVar); delete process.env[CUSTOM_PROVIDER.envVar]; process.env.CAIRN_IGNORE_ENV_KEYS = "1";
 		await keys.deleteKey("OPENAI_API_KEY");
 	}
 });
@@ -135,7 +135,7 @@ test("same target can retain its effective key", async () => {
 	assert.equal(requests[0]?.authorization, "Bearer retained");
 });
 test("environment ownership is shown; consent uses the environment key in probe and inference", async () => {
-	process.env.LH_IGNORE_ENV_KEYS = "0";
+	process.env.CAIRN_IGNORE_ENV_KEYS = "0";
 	process.env[CUSTOM_PROVIDER.envVar] = "environment-secret";
 	authEnvRecord().realEnv.add(CUSTOM_PROVIDER.envVar);
 	try {
@@ -168,9 +168,9 @@ test("empty DELETE streams normalize consistently without accepting malformed JS
 	assert.equal((await route.POST(new Request("http://localhost/api/custom-provider", { method: "POST", headers, body: "" }))).status, 400);
 });
 test("desktop capability remains mandatory in desktop mode", async () => {
-	process.env.LH_DESKTOP_SERVER = "1"; process.env.LH_DESKTOP_API_SECRET = "x".repeat(64);
+	process.env.CAIRN_DESKTOP_SERVER = "1"; process.env.CAIRN_DESKTOP_API_SECRET = "x".repeat(64);
 	assert.equal((await mutate({}, "DELETE")).status, 403);
-	assert.equal((await mutate(undefined, "DELETE", { origin: "null", "x-learnharness-desktop": "x".repeat(64) })).status, 200);
+	assert.equal((await mutate(undefined, "DELETE", { origin: "null", "x-cairn-desktop": "x".repeat(64) })).status, 200);
 });
 test("forbidden URL components are rejected before probing", async () => {
 	for (const baseUrl of ["ftp://h", "https://user:pass@h/v1", "http://h/v1?q=secret", "http://h/v1#x", "http://h/v1?", "http://h/v1#"]) assert.equal((await mutate({ baseUrl, authMode: "keyless" })).status, 400);

@@ -34,7 +34,7 @@ QUADERNO_SERVER_HOST=192.168.1.100
 QUADERNO_SERVER_PORT=5001
 QUADERNO_API_KEY="secret-api-key-123"
 QUADERNO_SYNC_DIR="~/Documents/QuadernoMirror"
-QUADERNO_LEARNHARNESS_FOLDER='custom-harness'
+QUADERNO_CAIRN_FOLDER='custom-harness'
 OTHER_VAR=ignored
 `;
 		const parsed = parseQuadernoDotEnv(raw);
@@ -308,7 +308,7 @@ describe("Quaderno Server Implementation", () => {
 				QUADERNO_SERVER_PORT: "6000",
 				QUADERNO_API_KEY: "override-key",
 				QUADERNO_SYNC_DIR: "~/CustomQuaderno",
-				QUADERNO_LEARNHARNESS_FOLDER: "harness-v2",
+				QUADERNO_CAIRN_FOLDER: "harness-v2",
 			} as unknown as NodeJS.ProcessEnv,
 		});
 
@@ -941,7 +941,7 @@ describe("sameOriginAuthorized Unified CSRF Guard", () => {
 
 		// Rejects forged x-forwarded-host (never trusted without matching Host)
 		assert.equal(
-			sameOriginAuthorized(new Headers({ origin: "http://learnharness.test", "x-forwarded-host": "learnharness.test" })),
+			sameOriginAuthorized(new Headers({ origin: "http://cairn.test", "x-forwarded-host": "cairn.test" })),
 			false,
 		);
 		assert.equal(
@@ -955,7 +955,7 @@ describe("sameOriginAuthorized Unified CSRF Guard", () => {
 			false,
 		);
 
-		// Rejects DNS-rebinding Host headers unless listed in LH_ALLOWED_HOSTS
+		// Rejects DNS-rebinding Host headers unless listed in CAIRN_ALLOWED_HOSTS
 		assert.equal(
 			sameOriginAuthorized(new Headers({ host: "rebind.attacker.example:3000" })),
 			false,
@@ -970,7 +970,7 @@ describe("sameOriginAuthorized Unified CSRF Guard", () => {
 			sameOriginAuthorized(
 				new Headers({ origin: "http://custom.internal:3000", host: "custom.internal:3000" }),
 				undefined,
-				{ LH_ALLOWED_HOSTS: "custom.internal" },
+				{ CAIRN_ALLOWED_HOSTS: "custom.internal" },
 			),
 			true,
 		);

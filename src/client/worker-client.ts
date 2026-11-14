@@ -380,7 +380,7 @@ export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } 
 	const worker = new Worker(new URL("../worker/entry.ts", import.meta.url), { type: "module" });
 	activeWorker = worker;
 	if (typeof window !== "undefined") {
-		(window as any).__LH_WORKER__ = worker;
+		(window as any).__CAIRN_WORKER__ = worker;
 	}
 
 	worker.onerror = (err) => {
@@ -394,7 +394,7 @@ export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } 
 		const el = document.getElementById("lh-boot-error-overlay") || document.createElement("div");
 		el.id = "lh-boot-error-overlay";
 		el.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e1e;color:#ff5555;z-index:999999;padding:24px;font-family:monospace;white-space:pre-wrap;overflow:auto;font-size:14px;line-height:1.4;";
-		el.textContent = "LearnHarness Worker Error:\n\n" + msg + (err.filename ? "\n\nAt: " + err.filename + ":" + err.lineno : "");
+		el.textContent = "Cairn Worker Error:\n\n" + msg + (err.filename ? "\n\nAt: " + err.filename + ":" + err.lineno : "");
 		(document.body || document.documentElement).appendChild(el);
 	};
 
@@ -404,7 +404,7 @@ export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } 
 			const el = document.getElementById("lh-boot-error-overlay") || document.createElement("div");
 			el.id = "lh-boot-error-overlay";
 			el.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e1e;color:#ff5555;z-index:999999;padding:24px;font-family:monospace;white-space:pre-wrap;overflow:auto;font-size:14px;line-height:1.4;";
-			el.textContent = "LearnHarness Backend Worker Failed To Boot:\n\n" + event.data.message;
+			el.textContent = "Cairn Backend Worker Failed To Boot:\n\n" + event.data.message;
 			(document.body || document.documentElement).appendChild(el);
 		}
 	});
@@ -459,9 +459,9 @@ export function initWorkerClient(): { worker: Worker; portFetch: typeof fetch } 
 	if (typeof window !== "undefined") {
 		const originalFetch = window.fetch.bind(window);
 		const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-		const isIosDev = Boolean(metaEnv?.VITE_LH_IOS_DEV);
+		const isIosDev = Boolean(metaEnv?.VITE_CAIRN_IOS_DEV);
 		const remoteBackend = isIosDev
-			? metaEnv?.VITE_LH_REMOTE_BACKEND || "http://192.168.1.73:3000"
+			? metaEnv?.VITE_CAIRN_REMOTE_BACKEND || "http://192.168.1.73:3000"
 			: null;
 
 function toBase64(data: string | Uint8Array | ArrayBuffer): string {
@@ -740,7 +740,7 @@ export class WorkerEventSource extends EventTarget {
 				: workerFetch ?? fetch);
 
 		const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-		const isIosDev = Boolean(metaEnv?.VITE_LH_IOS_DEV);
+		const isIosDev = Boolean(metaEnv?.VITE_CAIRN_IOS_DEV);
 		if (isIosDev && this.url.includes("/api/events")) {
 			setTimeout(() => {
 				this.readyState = 1;

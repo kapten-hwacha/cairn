@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>LearnHarness uses your microphone for dictation.</string>
+	<string>Cairn uses your microphone for dictation.</string>
 </dict>
 </plist>

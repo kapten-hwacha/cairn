@@ -168,7 +168,7 @@ node --import tsx scripts/plot-render-review.ts --run data/plot-benchmark/2026-1
    into a fresh benchmark directory, with no automatic attempt retries:
 
 ```sh
-npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.learnharness-dev" --model deepseek:deepseek-flash --thinking high --case 02-quadratic --case 09-discontinuity --case 10-narrow-peak --repetitions 1
+npm run benchmark:plot -- --profile-dir "/Users/hwacha/Library/Application Support/com.hwacha.cairn-dev" --model deepseek:deepseek-flash --thinking high --case 02-quadratic --case 09-discontinuity --case 10-narrow-peak --repetitions 1
 ```
 
 Report mathematical/presentation review separately from delivery outcomes. Do not

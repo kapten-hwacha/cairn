@@ -9,7 +9,7 @@ Product integration and final backend selection remain outside this approval.
 3D placement, drawing and raw export, with no typesetting during interaction.
 
 Use the writing-plans workflow. Preserve the dirty tree and completed 2D pipeline.
-No commits, publication, dependency changes in LearnHarness, teacher-tool changes,
+No commits, publication, dependency changes in Cairn, teacher-tool changes,
 product integration or broad SVG-text refactor are part of this approval.
 
 ## Source pins and build ownership
@@ -45,7 +45,7 @@ sizes. No string patching of a minified distribution.
 
 ## Files to create
 
-All paths below are relative to `/Users/hwacha/work/personal/learnharness`.
+All paths below are relative to `/Users/hwacha/work/personal/cairn`.
 
 | Path                                                               | Responsibility                                                        |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
@@ -205,12 +205,12 @@ integration and product animation budgets remain later gates.
 
 ## Explicit commands after approval
 
-From the LearnHarness root (all output directories must be fresh):
+From the Cairn root (all output directories must be fresh):
 
 ```sh
-node --import tsx scripts/plotly-math-fork/build.ts --work-dir /private/tmp/learnharness-plotly-native-math-01
-PLOTLY_MATH_BUILD_DIR=/private/tmp/learnharness-plotly-native-math-01 NODE_ENV=test node --import tsx --test tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/plotly-latex-probe.test.ts tests/plot-labels.test.ts
-node --import tsx scripts/plotly-math-fork/probe.ts --build-dir /private/tmp/learnharness-plotly-native-math-01 --out data/visualization-review/plotly-native-math-01
+node --import tsx scripts/plotly-math-fork/build.ts --work-dir /private/tmp/cairn-plotly-native-math-01
+PLOTLY_MATH_BUILD_DIR=/private/tmp/cairn-plotly-native-math-01 NODE_ENV=test node --import tsx --test tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/plotly-latex-probe.test.ts tests/plot-labels.test.ts
+node --import tsx scripts/plotly-math-fork/probe.ts --build-dir /private/tmp/cairn-plotly-native-math-01 --out data/visualization-review/plotly-native-math-01
 npm exec -- prettier --write 'scripts/plotly-math-fork/*.ts' scripts/plotly-math-fork/sources.lock.json scripts/plotly-math-fork/biome.json scripts/plotly-math-fork/tsconfig.checkjs.json tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/fixtures/visualization/plotly-native-math.json
 npm exec -- prettier --check 'scripts/plotly-math-fork/*.ts' scripts/plotly-math-fork/sources.lock.json scripts/plotly-math-fork/biome.json scripts/plotly-math-fork/tsconfig.checkjs.json tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/fixtures/visualization/plotly-native-math.json
 npm exec -- eslint --no-ignore --fix scripts/plotly-math-fork tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts
@@ -266,7 +266,7 @@ evidence, select the backend and finish the product contract/UX plan separately.
   builds differed only in CSS IDs derived from absolute checkout paths. It adds
   `tasks/util/inline_css.js` and changes `esbuild-config.js` to derive the ID from
   the project-relative CSS path. It applies to both control and fork. Two clean
-  builds (`/private/tmp/learnharness-plotly-native-math-06` and `-07`) now produce
+  builds (`/private/tmp/cairn-plotly-native-math-06` and `-07`) now produce
   byte-identical bundles; both source checkers cover the added files.
 - Mesh quality measures all boundary differences in the overlap score. The
   separate hole-fill check tests hole interiors outside the one-pixel contour

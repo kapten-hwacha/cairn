@@ -63,3 +63,4 @@ export { cliproxyInstallationResponse } from "./cliproxy.ts";
 export * from "./custom-provider.ts";
 export { customProviderGet, customProviderMutation } from "./custom-provider-http.ts";
 export { CustomBodyLimitError, readBoundedJson } from "./custom-provider-body.ts";
+export { mintDictationToken } from "./stt-token.ts";

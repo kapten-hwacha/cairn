@@ -1,5 +1,5 @@
 /** Opt-in behavioral captures: one last request/reply pair per background worker run.
- * LH_BACKGROUND_CAPTURE=auditor,extractor (or all). Private diagnostic content;
+ * CAIRN_BACKGROUND_CAPTURE=auditor,extractor (or all). Private diagnostic content;
  * never a credential/header recorder, retention policy, or worker recovery store.
  */
 import * as fs from "node:fs";
@@ -50,7 +50,7 @@ export const backgroundCaptureDir = {
 };
 
 export function backgroundCaptureEnabled(role: ModelRole): boolean {
-	const selected = process.env.LH_BACKGROUND_CAPTURE?.split(",").map((value) => value.trim());
+	const selected = process.env.CAIRN_BACKGROUND_CAPTURE?.split(",").map((value) => value.trim());
 	return selected?.includes("all") === true || selected?.includes(role) === true;
 }
 

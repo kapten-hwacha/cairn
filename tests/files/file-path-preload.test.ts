@@ -213,7 +213,7 @@ describe("Tauri file-path preload bridge", () => {
 			};
 
 			const origWin = (globalThis as any).window;
-			(globalThis as any).window = { __LH_WORKER__: mockWorker };
+			(globalThis as any).window = { __CAIRN_WORKER__: mockWorker };
 
 			try {
 				const bytes = new Uint8Array([10, 20, 30]);

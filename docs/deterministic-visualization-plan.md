@@ -2,7 +2,7 @@
 
 **Status:** milestone 0 in progress; feature implementation is not authorized.
 **Source:** [handoff](deterministic-visualization-handoff.md).
-**Repository:** `/Users/hwacha/work/personal/learnharness`.
+**Repository:** `/Users/hwacha/work/personal/cairn`.
 
 This document records decisions made during the resumed milestone-0 discussion.
 Approval of a direction does not approve every field name, implementation detail
@@ -77,7 +77,7 @@ not disposable experiment files.
   part of the working baseline. No reset, commit, cleanup or bulk formatting.
 
 A read-only preservation snapshot was saved at
-`/private/tmp/learnharness-milestone0-8JxMp6/`: `status.txt`, `tracked.diff`, and
+`/private/tmp/cairn-milestone0-8JxMp6/`: `status.txt`, `tracked.diff`, and
 SHA-256 hashes of 929 tracked/unignored files. This is local audit evidence, not
 a repository backup or a reason to discard concurrent user changes.
 
@@ -85,21 +85,21 @@ a repository backup or a reason to discard concurrent user changes.
 
 - Scoped regression command from handoff section 8: **224 passed, 0 failed**
   across 26 suites; 21.8 seconds. Log:
-  `/private/tmp/learnharness-milestone0-baseline.log`.
+  `/private/tmp/cairn-milestone0-baseline.log`.
 - Worker command from handoff section 8: **6 passed, 1 failed**. Worker WASM,
   Buffer, SVG/PDF and bridge-string tests passed. The real Chrome worker test
   failed during Puppeteer target discovery with `TargetCloseError`, before
   renderer/browser assertions. A separate startup-only diagnostic reproduced
   the same error. Cause is not established; do not label it a renderer failure
   or claim browser verification passed. Logs:
-  `/private/tmp/learnharness-milestone0-worker-baseline.log` and
-  `/private/tmp/learnharness-milestone0-chrome-diagnostic.log`.
+  `/private/tmp/cairn-milestone0-worker-baseline.log` and
+  `/private/tmp/cairn-milestone0-chrome-diagnostic.log`.
 - The failed browser test completed its isolated bundle builds first:
   renderer worker 4,203,628 bytes; Vega-only comparison 1,142,839 bytes;
   math/layout increment 3,060,789 bytes. These are unminified isolated bundles,
   not production artifact sizes.
 - `npm run typecheck`: passed. Log:
-  `/private/tmp/learnharness-milestone0-typecheck.log`.
+  `/private/tmp/cairn-milestone0-typecheck.log`.
 - `git diff --check`: passed before document changes.
 - No live model calls, dependency changes, feature code, commits or publishing.
 

@@ -73,7 +73,7 @@ export function resetMemoryStores(): void {
 	memoryPromptOverrides.clear();
 	memoryAuthContent = null;
 
-	(globalThis as any).__LH_PROMPT_OVERRIDE_CACHE__?.clear();
+	(globalThis as any).__CAIRN_PROMPT_OVERRIDE_CACHE__?.clear();
 }
 
 // ── Chats ────────────────────────────────────────────────────────────────────

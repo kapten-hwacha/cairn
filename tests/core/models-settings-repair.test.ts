@@ -9,15 +9,15 @@ import type { NativeSubscriptionSnapshot } from "../../src/core/contracts/subscr
 // Every app import follows isolation. No installed credentials, ambient keys,
 // OAuth, or provider requests: subscription state comes from synthetic IPC.
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "lh-models-repair-"));
-process.env.LH_DATA_DIR = directory;
-process.env.LH_AUTH_FILE = path.join(directory, "auth.json");
-process.env.LH_IGNORE_ENV_KEYS = "1";
-fs.writeFileSync(process.env.LH_AUTH_FILE, "{}");
+process.env.CAIRN_DATA_DIR = directory;
+process.env.CAIRN_AUTH_FILE = path.join(directory, "auth.json");
+process.env.CAIRN_IGNORE_ENV_KEYS = "1";
+fs.writeFileSync(process.env.CAIRN_AUTH_FILE, "{}");
 const originalSend = Object.getOwnPropertyDescriptor(process, "send");
 const originalConnected = Object.getOwnPropertyDescriptor(process, "connected");
-const marker = process.env.LH_DESKTOP_SERVER, secret = process.env.LH_DESKTOP_API_SECRET;
-process.env.LH_DESKTOP_SERVER = "1";
-process.env.LH_DESKTOP_API_SECRET = "d".repeat(64);
+const marker = process.env.CAIRN_DESKTOP_SERVER, secret = process.env.CAIRN_DESKTOP_API_SECRET;
+process.env.CAIRN_DESKTOP_SERVER = "1";
+process.env.CAIRN_DESKTOP_API_SECRET = "d".repeat(64);
 Object.defineProperty(process, "connected", { configurable: true, value: true });
 
 const { piModels, piEngineForSpec } = await import("../../src/agent/models.ts");
@@ -56,7 +56,7 @@ beforeEach(async () => {
 after(() => {
 	if (originalSend) Object.defineProperty(process, "send", originalSend); else delete process.send;
 	if (originalConnected) Object.defineProperty(process, "connected", originalConnected); else delete (process as { connected?: boolean }).connected;
-	for (const [key, value] of [["LH_DESKTOP_SERVER", marker], ["LH_DESKTOP_API_SECRET", secret]]) {
+	for (const [key, value] of [["CAIRN_DESKTOP_SERVER", marker], ["CAIRN_DESKTOP_API_SECRET", secret]]) {
 		if (value === undefined) delete process.env[key!]; else process.env[key!] = value;
 	}
 	fs.rmSync(directory, { recursive: true, force: true });

@@ -5,8 +5,8 @@ import path from "node:path";
 import { after, describe, it } from "node:test";
 
 const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-worker-router-"));
-process.env.LH_DATA_DIR = tempDataDir;
-process.env.LH_AUTH_FILE = path.join(tempDataDir, "auth.json");
+process.env.CAIRN_DATA_DIR = tempDataDir;
+process.env.CAIRN_AUTH_FILE = path.join(tempDataDir, "auth.json");
 
 const { dispatchWorkerRequest } = await import("../../src/worker/router.ts");
 

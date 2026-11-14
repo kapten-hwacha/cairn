@@ -6,7 +6,7 @@ function createProcessPolyfill() {
 		env: { NODE_ENV: "production" } as Record<string, string | undefined>,
 		platform: typeof navigator !== "undefined" && navigator.userAgent.includes("Win") ? "win32" : "darwin",
 		arch: "arm64",
-		title: "learnharness",
+		title: "cairn",
 		pid: 1,
 		versions: { node: "20.0.0", v8: "11.0.0" },
 		cwd: () => "/",

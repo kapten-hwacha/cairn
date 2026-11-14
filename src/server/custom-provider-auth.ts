@@ -23,7 +23,7 @@ export async function customAuthState(inspectKey = false, requiredConfig?: Custo
 		result.fileKey = snapshot.fileKey();
 		const record = authEnvRecord();
 		const env = getRuntimeEnv();
-		const envKey = env.LH_IGNORE_ENV_KEYS !== "1" && record.realEnv.has(CUSTOM_PROVIDER.envVar) ? env[CUSTOM_PROVIDER.envVar] : undefined;
+		const envKey = env.CAIRN_IGNORE_ENV_KEYS !== "1" && record.realEnv.has(CUSTOM_PROVIDER.envVar) ? env[CUSTOM_PROVIDER.envVar] : undefined;
 		result.source = envKey !== undefined ? "env" : result.fileKey !== undefined ? "file" : "none";
 		result.key = (envKey ?? result.fileKey)?.trim() || undefined;
 		return result;

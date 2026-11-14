@@ -132,7 +132,7 @@ dependencies require Node 22.19 or newer. The manifest records the actual runtim
 
 ```sh
 npm run benchmark:plot -- \
-  --profile-dir "$HOME/Library/Application Support/com.hwacha.learnharness-dev" \
+  --profile-dir "$HOME/Library/Application Support/com.hwacha.cairn-dev" \
   --model deepseek:deepseek-flash --thinking high
 ```
 
@@ -142,7 +142,7 @@ strong slot. To compare another model, change the command, not the fixtures:
 
 ```sh
 npm run benchmark:plot -- \
-  --profile-dir "$HOME/Library/Application Support/com.hwacha.learnharness-dev" \
+  --profile-dir "$HOME/Library/Application Support/com.hwacha.cairn-dev" \
   --model openrouter:vendor/model-id --thinking medium --repetitions 3
 ```
 
@@ -157,7 +157,7 @@ Options:
 
 | Option                          | Meaning                                                                                          |
 | ------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `--profile-dir <directory>`     | Required for live runs; contains `learnharness.db` and optional `auth.json`                      |
+| `--profile-dir <directory>`     | Required for live runs; contains `cairn.db` and optional `auth.json`                      |
 | `--model <provider:model-id>`   | Override conversation model, preserving colons inside the model ID                               |
 | `--thinking <level>`            | `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`; app engine clamps to model support |
 | `--case <id>`                   | Select a case; repeat to select several                                                          |

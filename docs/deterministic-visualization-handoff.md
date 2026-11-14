@@ -50,7 +50,7 @@ approved with “implement the title-bounds fix”. Its fifth patch is complete;
 25 focused tests, all 110 runtime matrix cases and all 108 camera-sweep
 observations pass. The full probe exits 0 with `passed: true`, no unexpected
 page/network errors and zero native math conversions during interaction. Fresh
-builds `learnharness-plotly-title-bounds-01` and `-02` match byte-for-byte.
+builds `cairn-plotly-title-bounds-01` and `-02` match byte-for-byte.
 The complete matrix/sweep/performance run is saved under
 `data/visualization-review/plotly-title-bounds-01` (log:
 `/private/tmp/lh-title-full-probe01.log`). All 18 timing configurations completed.
@@ -66,8 +66,8 @@ implementation plan remain unapproved.
 
 **Desktop packaging check (2026-11-14):** `npm run desktop:dist` completed
 successfully, producing the ARM64 app at
-`src-tauri/target/release/bundle/macos/LearnHarness.app` and installer at
-`src-tauri/target/release/bundle/dmg/LearnHarness_0.5.0_aarch64.dmg`.
+`src-tauri/target/release/bundle/macos/Cairn.app` and installer at
+`src-tauri/target/release/bundle/dmg/Cairn_0.5.0_aarch64.dmg`.
 This packages the current app, including the completed 2D plotting changes.
 The isolated Plotly fork has no production import or Vite copy step, so it is
 not included in this app build. This packaging check does not close the
@@ -118,7 +118,7 @@ sampling budgets, prompt wording or UX defaults.
 
 ## 2. Instructions and working-tree state
 
-Repository: `/Users/hwacha/work/personal/learnharness`.
+Repository: `/Users/hwacha/work/personal/cairn`.
 
 - Read `AGENTS.md`. It requires investigating, resolving ambiguous design
   decisions with the user, and getting the concrete plan approved before coding.

@@ -11,10 +11,10 @@ import type { ChatInput } from "../../src/core/input-events.ts";
 
 assert.equal(process.env.NODE_ENV, "test");
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "lh-malformed-question-"));
-process.env.LH_DATA_DIR = path.join(scratch, "data");
-process.env.LH_AUTH_FILE = path.join(scratch, "auth.json");
+process.env.CAIRN_DATA_DIR = path.join(scratch, "data");
+process.env.CAIRN_AUTH_FILE = path.join(scratch, "auth.json");
 process.env.OPENROUTER_API_KEY = "offline-key-presence-only";
-fs.writeFileSync(process.env.LH_AUTH_FILE, "{}");
+fs.writeFileSync(process.env.CAIRN_AUTH_FILE, "{}");
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 
 const { resetMemoryStores } = await import("../../src/store/memory-backend.ts");

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { installTauriPreload, stepZoom, ZOOM_LADDER } from "../../src/client/tauri-preload.ts";
 import { getPlatform, isDesktop, isIos, isTauri } from "../../src/client/platform.ts";
 
-const EXPECTED_LH_KEYS = [
+const EXPECTED_CAIRN_KEYS = [
 	"chatgpt",
 	"expandWindow",
 	"getPathForFile",
@@ -33,7 +33,7 @@ describe("Tauri desktop platform preload", () => {
 
 		assert.ok(target.lh, "target.lh should be defined");
 		const actualKeys = Object.keys(target.lh).sort();
-		assert.deepEqual(actualKeys, EXPECTED_LH_KEYS);
+		assert.deepEqual(actualKeys, EXPECTED_CAIRN_KEYS);
 	});
 
 	it("no raw invoke, fs, or webUtils exposed", () => {
@@ -100,7 +100,7 @@ describe("Tauri desktop platform preload", () => {
 		const configPath = fileURLToPath(new URL("../../src-tauri/tauri.conf.json", import.meta.url));
 		const config = JSON.parse(readFileSync(configPath, "utf8"));
 
-		assert.equal(config.identifier, "com.hwacha.learnharness");
+		assert.equal(config.identifier, "com.hwacha.cairn");
 		assert.equal(config.build.frontendDist, "../dist-web");
 
 		const win = config.app.windows[0];
@@ -120,7 +120,7 @@ describe("Tauri desktop platform preload", () => {
 		assert.equal(config.bundle.iOS.developmentTeam, "");
 		assert.equal(config.build?.devUrl, null);
 		const win = config.app.windows[0];
-		assert.equal(win.title, "LearnHarness");
+		assert.equal(win.title, "Cairn");
 		assert.equal(win.fullscreen, undefined);
 		assert.equal(win.resizable, false);
 	});

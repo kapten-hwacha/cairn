@@ -4,8 +4,8 @@ import { SettingsRow } from "./controls.tsx";
 
 /** Version information is displayed in Settings -> General. */
 export function UpdateSettings({
-	version = process.env.LH_VERSION ?? "",
-	homepage = process.env.LH_HOMEPAGE ?? "",
+	version = process.env.CAIRN_VERSION ?? "",
+	homepage = process.env.CAIRN_HOMEPAGE ?? "",
 }: {
 	version?: string;
 	homepage?: string;

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "LearnHarness",
-  "version": "0.5.0",
-  "identifier": "com.hwacha.learnharness",
+  "productName": "Cairn",
+  "version": "0.1.0",
+  "identifier": "com.hwacha.cairn",
   "build": {
     "beforeDevCommand": "npm run vite:dev",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "LearnHarness",
+        "title": "Cairn",
         "width": 1440,
         "height": 900,
         "minWidth": 640,

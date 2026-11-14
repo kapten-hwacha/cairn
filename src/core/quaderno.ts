@@ -57,7 +57,7 @@ export function parseQuadernoDotEnv(raw: string): Partial<{
 		else if (key === "QUADERNO_SERVER_PORT") result.port = val;
 		else if (key === "QUADERNO_API_KEY") result.apiKey = val;
 		else if (key === "QUADERNO_SYNC_DIR") result.syncDir = val;
-		else if (key === "QUADERNO_LEARNHARNESS_FOLDER") result.folder = val;
+		else if (key === "QUADERNO_CAIRN_FOLDER") result.folder = val;
 	}
 
 	return result;

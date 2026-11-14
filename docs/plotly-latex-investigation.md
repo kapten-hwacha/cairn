@@ -28,7 +28,7 @@ Small-view label readability and arbitrary collisions remain product UX topics.
 
 The experiment files are in `scripts/plotly-math-fork/`; maintained changes are
 four integrity-pinned patches, applied in a separate source checkout. Existing
-LearnHarness source, dependencies and the completed 2D pipeline are unchanged.
+Cairn source, dependencies and the completed 2D pipeline are unchanged.
 
 - Exact sources: Plotly `a929a77b3522887360671c30b270828a04cf4b81`, axes `1.7.1`,
   converter `3.2.2`, MathJax/font `4.1.3`, resvg `2.6.2`.
@@ -374,7 +374,7 @@ allowed to fork authorizes this broader scope.
 ## Reproducing the isolated experiment
 
 The user subsequently authorized testing the workaround. Created these
-LearnHarness-only experiment files; no product renderer or dependency changed:
+Cairn-only experiment files; no product renderer or dependency changed:
 
 - `scripts/plotly-latex-probe.ts`: offline CLI consuming an explicitly
   supplied `plotly.js-gl3d-dist-min@4.3.0` package directory; refuses an existing output directory;

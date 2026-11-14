@@ -57,7 +57,7 @@ fs.readFileSync = ((...args: Parameters<typeof read>) => {
 			return;
 		}
 		if (cmd === "lh_init_runtime") {
-			return { homeDir: process.env.LH_DATA_DIR || "/home", authVars: {} };
+			return { homeDir: process.env.CAIRN_DATA_DIR || "/home", authVars: {} };
 		}
 		return null;
 	},
@@ -78,7 +78,7 @@ if (mode === "inspect") {
 		reason = (await engine.streamFn(engine.model, normalizeContext({ messages: [{ role: "user", content: "fixture", timestamp: 0 }] }), {}).result()).stopReason;
 	} catch { reason = "refused"; }
 	const statuses = await keyStatuses();
-	console.log(JSON.stringify({ enabled, reason, requests, statusIds: statuses.map(row => row.id), metadataInEnv: process.env.__learnharness_custom_provider_binding !== undefined }));
+	console.log(JSON.stringify({ enabled, reason, requests, statusIds: statuses.map(row => row.id), metadataInEnv: process.env.__cairn_custom_provider_binding !== undefined }));
 } else {
 	const route = await import("../../app/api/custom-provider/route.ts");
 	const get = await route.GET(new Request("http://localhost/api/custom-provider"));

@@ -22,7 +22,7 @@ describe("Bundled Static Assets", () => {
 	it("readBundledSystemPrompt() returns non-empty base system prompt", () => {
 		const prompt = readBundledSystemPrompt();
 		assert.ok(typeof prompt === "string" && prompt.length > 50);
-		assert.ok(prompt.includes("LearnHarness") || prompt.includes("teacher") || prompt.length > 0);
+		assert.ok(prompt.includes("Cairn") || prompt.includes("teacher") || prompt.length > 0);
 	});
 
 	it("getBundledPrompt() reads system-prompt and fragment paths", () => {

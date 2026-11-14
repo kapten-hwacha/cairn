@@ -12,7 +12,7 @@ import path from "node:path";
 import { backgroundCaptureDir, backgroundCaptureStream, createBackgroundCapture } from "../../src/agent/background-capture.ts";
 
 const originalSend = Object.getOwnPropertyDescriptor(process, "send"), originalConnected = Object.getOwnPropertyDescriptor(process, "connected");
-const marker = process.env.LH_DESKTOP_SERVER, secret = process.env.LH_DESKTOP_API_SECRET;
+const marker = process.env.CAIRN_DESKTOP_SERVER, secret = process.env.CAIRN_DESKTOP_API_SECRET;
 const xaiKey = process.env.XAI_API_KEY, copilotKey = process.env.COPILOT_GITHUB_TOKEN;
 let revision = 1, denied = false, sends = 0;
 const context = normalizeContext({ messages: [{ role: "user", content: "Offline fixture", timestamp: 0 }] });
@@ -24,7 +24,7 @@ function snapshot(background = true): NativeSubscriptionSnapshot {
 }
 const emit = (value: unknown) => (process.emit as (event: string, value: unknown) => boolean)("message", value);
 before(async () => {
-	process.env.LH_DESKTOP_SERVER = "1"; process.env.LH_DESKTOP_API_SECRET = "d".repeat(64);
+	process.env.CAIRN_DESKTOP_SERVER = "1"; process.env.CAIRN_DESKTOP_API_SECRET = "d".repeat(64);
 	process.env.XAI_API_KEY = "fixture-must-never-be-used"; process.env.COPILOT_GITHUB_TOKEN = "fixture-api-route-only";
 	Object.defineProperty(process, "connected", { configurable: true, value: true });
 	Object.defineProperty(process, "send", { configurable: true, value: (message: any, callback?: () => void) => {
@@ -36,7 +36,7 @@ before(async () => {
 after(() => {
 	if (originalSend) Object.defineProperty(process, "send", originalSend); else delete process.send;
 	if (originalConnected) Object.defineProperty(process, "connected", originalConnected); else delete (process as { connected?: boolean }).connected;
-	for (const [key, value] of [["LH_DESKTOP_SERVER", marker], ["LH_DESKTOP_API_SECRET", secret], ["XAI_API_KEY", xaiKey], ["COPILOT_GITHUB_TOKEN", copilotKey]]) { if (value === undefined) delete process.env[key!]; else process.env[key!] = value; }
+	for (const [key, value] of [["CAIRN_DESKTOP_SERVER", marker], ["CAIRN_DESKTOP_API_SECRET", secret], ["XAI_API_KEY", xaiKey], ["COPILOT_GITHUB_TOKEN", copilotKey]]) { if (value === undefined) delete process.env[key!]; else process.env[key!] = value; }
 });
 test("logical subscription routes are separate catalog entries without rewriting native API models", () => {
 	for (const p of NATIVE_SUBSCRIPTIONS) {
@@ -46,11 +46,11 @@ test("logical subscription routes are separate catalog entries without rewriting
 });
 for (const p of NATIVE_SUBSCRIPTIONS) test(`${p.providerId}: every SDK transport keeps native identity, account auth and selected model before dispatch`, async (t) => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-subscription-capture-"));
-	const previousDir = backgroundCaptureDir.current, previousFlag = process.env.LH_BACKGROUND_CAPTURE;
-	backgroundCaptureDir.current = dir; process.env.LH_BACKGROUND_CAPTURE = "researcher";
+	const previousDir = backgroundCaptureDir.current, previousFlag = process.env.CAIRN_BACKGROUND_CAPTURE;
+	backgroundCaptureDir.current = dir; process.env.CAIRN_BACKGROUND_CAPTURE = "researcher";
 	t.after(() => {
 		backgroundCaptureDir.current = previousDir;
-		if (previousFlag === undefined) delete process.env.LH_BACKGROUND_CAPTURE; else process.env.LH_BACKGROUND_CAPTURE = previousFlag;
+		if (previousFlag === undefined) delete process.env.CAIRN_BACKGROUND_CAPTURE; else process.env.CAIRN_BACKGROUND_CAPTURE = previousFlag;
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 	const apis = new Set<string>();
@@ -122,7 +122,7 @@ test("background invalidation is provider-specific and preserves foreground cont
 	foreground.release(); background.release(); other.release();
 });
 test("framework IPC alone cannot request subscription credentials or retain a usable catalog", async () => {
-	const previous = sends; delete process.env.LH_DESKTOP_SERVER;
+	const previous = sends; delete process.env.CAIRN_DESKTOP_SERVER;
 	await assert.rejects(subscriptionRequest("snapshot"), /desktop app/); assert.equal(sends, previous); assert.deepEqual(nativeSubscriptionModels(), []);
-	process.env.LH_DESKTOP_SERVER = "1";
+	process.env.CAIRN_DESKTOP_SERVER = "1";
 });

@@ -38,8 +38,8 @@ export async function superviseCase(
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
-      LH_DATA_DIR: path.join(options.outputDir, "isolated-data"),
-      LH_PROVIDER_EVENTS: "",
+      CAIRN_DATA_DIR: path.join(options.outputDir, "isolated-data"),
+      CAIRN_PROVIDER_EVENTS: "",
     },
   });
   const capture = (chunk: Buffer) => {

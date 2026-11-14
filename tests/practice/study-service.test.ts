@@ -1,6 +1,6 @@
 /**
  * Study-time service (docs/designs/study-time.md): src/server/study.ts
- * against a temp LH_DATA_DIR with real chat files and settings.
+ * against a temp CAIRN_DATA_DIR with real chat files and settings.
  */
 
 import assert from "node:assert/strict";
@@ -11,7 +11,7 @@ import { after, beforeEach, describe, it } from "node:test";
 import { resetMemoryStores } from "../../src/store/memory-backend.ts";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lh-study-service-"));
-process.env.LH_DATA_DIR = dir;
+process.env.CAIRN_DATA_DIR = dir;
 const { stores } = await import("../../src/server/stores.ts");
 const { closeStudyOnShutdown, recordStudy, studyHistory } = await import("../../src/server/study.ts");
 const { newUserMessage } = await import("../../src/core/native-messages.ts");

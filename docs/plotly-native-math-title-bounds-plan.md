@@ -17,7 +17,7 @@ preparation. All 18 performance configurations completed their five measured
 repetitions after warm-up. A separate oversized-title browser check produced
 the expected field-specific fit failure without an uncaught render-loop error.
 Clean
-builds `/private/tmp/learnharness-plotly-title-bounds-01` and `-02` are
+builds `/private/tmp/cairn-plotly-title-bounds-01` and `-02` are
 byte-identical. Review the full matrix, sweep and performance evidence in
 `data/visualization-review/plotly-title-bounds-01/index.html`, `results.json`,
 `performance-summary.json` and `build-reproducibility.json`. The negative
@@ -121,12 +121,12 @@ replacement/removal/resize/purge, offline/CSP checks and performance comparisons
 Require zero runtime failures, zero repeated math preparation and no new network
 or console errors. Record performance deltas without inventing an FPS budget.
 
-Commands from the LearnHarness root, using fresh directories:
+Commands from the Cairn root, using fresh directories:
 
 ```sh
-node --import tsx scripts/plotly-math-fork/build.ts --work-dir /private/tmp/learnharness-plotly-title-bounds-01
-PLOTLY_MATH_BUILD_DIR=/private/tmp/learnharness-plotly-title-bounds-01 NODE_ENV=test node --import tsx --test tests/plotly-title-bounds.test.ts tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/plotly-latex-probe.test.ts tests/plot-labels.test.ts
-node --import tsx scripts/plotly-math-fork/probe.ts --build-dir /private/tmp/learnharness-plotly-title-bounds-01 --out data/visualization-review/plotly-title-bounds-01
+node --import tsx scripts/plotly-math-fork/build.ts --work-dir /private/tmp/cairn-plotly-title-bounds-01
+PLOTLY_MATH_BUILD_DIR=/private/tmp/cairn-plotly-title-bounds-01 NODE_ENV=test node --import tsx --test tests/plotly-title-bounds.test.ts tests/plotly-math-mesh.test.ts tests/plotly-math-fork.test.ts tests/plotly-latex-probe.test.ts tests/plot-labels.test.ts
+node --import tsx scripts/plotly-math-fork/probe.ts --build-dir /private/tmp/cairn-plotly-title-bounds-01 --out data/visualization-review/plotly-title-bounds-01
 npm exec -- prettier --write scripts/plotly-math-fork tests/plotly-title-bounds.test.ts tests/fixtures/visualization/plotly-native-math.json
 npm exec -- prettier --check scripts/plotly-math-fork tests/plotly-title-bounds.test.ts tests/fixtures/visualization/plotly-native-math.json
 npm exec -- eslint --no-ignore --fix scripts/plotly-math-fork tests/plotly-title-bounds.test.ts
@@ -138,7 +138,7 @@ git diff --check
 Use the existing checkout-local Biome and focused `checkJs` configuration for the
 patched JS. For GLSL, install `prettier-plugin-glsl@0.3.1` with Prettier `3.10.1`
 in the disposable checks-tools directory, recording its own lockfile/integrities;
-do not change LearnHarness or upstream manifests. Run the plugin formatter in
+do not change Cairn or upstream manifests. Run the plugin formatter in
 write/check modes. GLSL parsing through the pinned shader build and actual
 WebGL compilation/linking supply syntax/type validation; browser checks must
 reject any shader compile/link error. Re-export formatted patches and compare

@@ -71,7 +71,7 @@ pub fn open_and_init_db(
 
 pub fn init_storage(app: &tauri::AppHandle) -> Result<DbState, String> {
     let (data_dir, auth_file, user_data_dir) = crate::fs_bridge::resolve_app_dirs(app);
-    let db_path = user_data_dir.join("learnharness.db");
+    let db_path = user_data_dir.join("cairn.db");
     open_and_init_db(&db_path, &data_dir, &auth_file, &user_data_dir)
 }
 
@@ -107,7 +107,7 @@ mod tests {
         let tmp = std::env::temp_dir().join(format!("lh_sql_init_{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&tmp).unwrap();
-        let db_path = tmp.join("learnharness.db");
+        let db_path = tmp.join("cairn.db");
         let data_dir = tmp.join("data");
         let auth_file = tmp.join("auth.json");
         let state = open_and_init_db(&db_path, &data_dir, &auth_file, &tmp).unwrap();

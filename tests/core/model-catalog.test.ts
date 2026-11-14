@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
 const testData = fs.mkdtempSync(path.join(os.tmpdir(), "lh-cli-catalog-data-"));
-process.env.LH_DATA_DIR = testData;
+process.env.CAIRN_DATA_DIR = testData;
 after(() => fs.rmSync(testData, { recursive: true, force: true }));
 const {
 	catalogContextLimits,
@@ -372,7 +372,7 @@ async function withClaudeInstalled(installed: boolean, fn: () => void | Promise<
 	}
 }
 
-describe("the claude-code provider (native CLI authentication, no LearnHarness key)", () => {
+describe("the claude-code provider (native CLI authentication, no Cairn key)", () => {
 	it("modelCatalog() lists claude-code opus/sonnet/haiku when the CLI is installed", async () => {
 		await withClaudeInstalled(true, async () => {
 			const ids = (await modelCatalog())
