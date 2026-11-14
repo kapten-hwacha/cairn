@@ -57,6 +57,7 @@ pub fn study_read_intervals(conn: &Connection) -> Result<Vec<Value>, String> {
             let end: String = row.get(2)?;
             let end_reason: String = row.get(3)?;
             Ok(json!({
+                "v": 1,
                 "chatId": chat_id,
                 "start": start,
                 "end": end,
@@ -497,6 +498,7 @@ mod tests {
 
         // 2. Study intervals
         let int1 = json!({
+            "v": 1,
             "chatId": "chat_1",
             "start": "2026-10-01T00:00:00Z",
             "end": "2026-10-01T01:00:00Z",
@@ -505,7 +507,11 @@ mod tests {
         study_append_intervals(&mut conn, &[int1]).unwrap();
         let intervals = study_read_intervals(&conn).unwrap();
         assert_eq!(intervals.len(), 1);
+        assert_eq!(intervals[0]["v"], 1);
         assert_eq!(intervals[0]["chatId"], "chat_1");
+        assert_eq!(intervals[0]["start"], "2026-10-01T00:00:00Z");
+        assert_eq!(intervals[0]["end"], "2026-10-01T01:00:00Z");
+        assert_eq!(intervals[0]["endReason"], "stop");
 
         // Study materials
         let mat = json!({"topics": ["qm", "math"]});
