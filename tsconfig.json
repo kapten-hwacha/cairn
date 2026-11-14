@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2023",
-      "dom",
-      "dom.iterable"
-    ],
+    "lib": ["ES2023", "dom", "dom.iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -19,13 +15,9 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "incremental": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
     "plugins": [
       {
@@ -45,6 +37,7 @@
     "node_modules",
     "dist",
     "dist-web",
+    "dist-web-plot3d-smoke",
     ".next",
     "src-tauri"
   ]

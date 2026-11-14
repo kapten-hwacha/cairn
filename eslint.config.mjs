@@ -21,61 +21,73 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
  */
 
 export default defineConfig([
-	// electron/** — the desktop shell: plain Node, no framework, outside the
-// import law (same rationale as scripts/).
-	globalIgnores([".next/**", "node_modules/**", "data/**", "next-env.d.ts", "scripts/**", "electron/**", "dist/**", "dist-web/**", "src-tauri/**"]),
-	{
-		files: ["**/*.{js,mjs,ts,tsx}"],
-		languageOptions: {
-			parser: tsParser,
-			parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-		},
-		plugins: {
-			"@next/next": nextPlugin,
-			import: importPlugin,
-			"react-hooks": reactHooksPlugin,
-		},
-		settings: {
-			"import/resolver": { typescript: { alwaysTryTypes: true } },
-		},
-		rules: {
-			...nextPlugin.configs.recommended.rules,
-			"react-hooks/rules-of-hooks": "error",
-			"react-hooks/exhaustive-deps": "warn",
-			"import/no-restricted-paths": [
-				"error",
-				{
-					zones: [
-						{
-							target: "./components",
-							from: "./src",
-							// NOTE: the plugin resolves `except` relative to the zone's `from` path.
-							except: ["./core/index.ts"],
-							message:
-								"Browser shell imports ONLY the pure core barrel: `from \"@/src/core\"` (architecture: docs/architecture.md).",
-						},
-						{
-							target: "./app",
-							from: "./src",
-							except: ["./core/index.ts", "./server/index.ts"],
-							message:
-								"app/ (transport + server components) imports ONLY the barrels: `@/src/core` and `@/src/server` (architecture: docs/architecture.md).",
-						},
-						{
-							target: "./src/core",
-							from: ["./src/agent", "./src/server", "./src/store"],
-							message:
-								"Pure core never imports IO layers (agent/server/store): adapters implement core/ports.ts, and the composition root (src/server/stores.ts) passes them in (architecture: docs/architecture.md).",
-						},
-						{
-							target: "./src/agent",
-							from: ["./src/server", "./src/store"],
-							message:
-								"The agent layer receives its dependencies (storage ports via factories/closures) — it never imports the server layer or store adapters (architecture: docs/architecture.md).",
-						},
-					],
-				},
-			],
-		},
-	},
+  // electron/** — the desktop shell: plain Node, no framework, outside the
+  // import law (same rationale as scripts/).
+  globalIgnores([
+    ".next/**",
+    "node_modules/**",
+    "data/**",
+    "next-env.d.ts",
+    "scripts/**",
+    "electron/**",
+    "dist/**",
+    "dist-web/**",
+    "dist-web-plot3d-smoke/**",
+    "src/vendor/plotly-native-math/contour.mjs",
+    "src-tauri/**",
+  ]),
+  {
+    files: ["**/*.{js,mjs,ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { ecmaVersion: "latest", sourceType: "module" },
+    },
+    plugins: {
+      "@next/next": nextPlugin,
+      import: importPlugin,
+      "react-hooks": reactHooksPlugin,
+    },
+    settings: {
+      "import/resolver": { typescript: { alwaysTryTypes: true } },
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./components",
+              from: "./src",
+              // NOTE: the plugin resolves `except` relative to the zone's `from` path.
+              except: ["./core/index.ts"],
+              message:
+                'Browser shell imports ONLY the pure core barrel: `from "@/src/core"` (architecture: docs/architecture.md).',
+            },
+            {
+              target: "./app",
+              from: "./src",
+              except: ["./core/index.ts", "./server/index.ts"],
+              message:
+                "app/ (transport + server components) imports ONLY the barrels: `@/src/core` and `@/src/server` (architecture: docs/architecture.md).",
+            },
+            {
+              target: "./src/core",
+              from: ["./src/agent", "./src/server", "./src/store"],
+              message:
+                "Pure core never imports IO layers (agent/server/store): adapters implement core/ports.ts, and the composition root (src/server/stores.ts) passes them in (architecture: docs/architecture.md).",
+            },
+            {
+              target: "./src/agent",
+              from: ["./src/server", "./src/store"],
+              message:
+                "The agent layer receives its dependencies (storage ports via factories/closures) — it never imports the server layer or store adapters (architecture: docs/architecture.md).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

@@ -11,6 +11,7 @@ SCOPE.md
 real-data-extraction/
 dist/
 dist-web/
+dist-web-plot3d-smoke/
 
 # dev auth/keys store (auth-keys wave): repo-root auth.json — secrets never committed
 auth.json
