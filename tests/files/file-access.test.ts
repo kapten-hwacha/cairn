@@ -112,7 +112,15 @@ describe("optional folder policy (finishing lickbot #157)", () => {
 	});
 	it("mandatory named/canonical denials win even when a parent is explicitly allowed", async () => {
 		policy = { restricted: true, folders: [root] };
-		for (const file of [auth, path.join(home, ".ssh", "key"), path.join(a, ".env.example")]) {
+		await write(path.join(home, ".zshrc"), "export OPENAI_API_KEY=sk-secret\n");
+		await write(path.join(home, "Library", "Application Support", "1Password", "vault.db"), "SYNTHETIC_CREDENTIAL_MARKER\n");
+		for (const file of [
+			auth,
+			path.join(home, ".ssh", "key"),
+			path.join(home, ".zshrc"),
+			path.join(home, "Library", "Application Support", "1Password", "vault.db"),
+			path.join(a, ".env.example"),
+		]) {
 			await assert.rejects(readTool.execute!("x", { path: file }), mandatory);
 			await assert.rejects(grepTool.execute!("x", { path: file, pattern: "x" }), mandatory);
 		}
@@ -130,6 +138,21 @@ describe("optional folder policy (finishing lickbot #157)", () => {
 		assert.ok(isWithin(path.join(a, "..notes", "notes"), a));
 		assert.ok(!isWithin(`${a}-old`, a));
 		assert.ok(!isWithin(path.dirname(a), a));
+	});
+	it("resolvePolicy retains allowed folders when fs.realpathSync.native throws in worker runtime", async () => {
+		const syncFs = await import("node:fs");
+		const origNative = syncFs.default.realpathSync.native;
+		syncFs.default.realpathSync.native = (() => {
+			throw new Error("fs.realpathSync.native is not supported in browser/worker runtime");
+		}) as unknown as typeof syncFs.default.realpathSync.native;
+		try {
+			const resolved = resolvePolicy({ restricted: true, folders: [a, path.join(a, "nested"), b] });
+			assert.deepEqual(resolved.folders, [a, b]);
+			assert.deepEqual(resolved.unavailable, []);
+			assert.equal(guardSourcePath(notesA, resolved), notesA);
+		} finally {
+			syncFs.default.realpathSync.native = origNative;
+		}
 	});
 });
 

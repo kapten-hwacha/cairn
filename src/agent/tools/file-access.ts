@@ -61,6 +61,9 @@ export function isWithin(absolute: string, root: string, ignoreCase = false): bo
 export function realSourcePath(absolute: string): string {
 	try { return fs.realpathSync.native(/* turbopackIgnore: true */ absolute); }
 	catch (error) {
+		if (error instanceof Error && error.message.includes("not supported in browser/worker runtime")) {
+			return comparisonPath(absolute);
+		}
 		const code = (error as NodeJS.ErrnoException).code;
 		if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
 		const parent = path.dirname(absolute);
@@ -83,7 +86,16 @@ export function resolvePolicy(policy: FileAccessPolicy = fileAccessPolicy()): Re
 			if (folders.some((root) => isWithin(real, root))) continue;
 			for (let i = folders.length - 1; i >= 0; i--) if (isWithin(folders[i]!, real)) folders.splice(i, 1);
 			folders.push(real);
-		} catch { unavailable.push(`Unavailable allowed folder: ${folder}`); }
+		} catch (err) {
+			if (err instanceof Error && err.message.includes("not supported in browser/worker runtime")) {
+				const real = comparisonPath(folder);
+				if (folders.some((root) => isWithin(real, root))) continue;
+				for (let i = folders.length - 1; i >= 0; i--) if (isWithin(folders[i]!, real)) folders.splice(i, 1);
+				folders.push(real);
+				continue;
+			}
+			unavailable.push(`Unavailable allowed folder: ${folder}`);
+		}
 	}
 	return { restricted: true, folders, unavailable };
 }

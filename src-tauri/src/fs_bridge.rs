@@ -114,6 +114,29 @@ pub const SENSITIVE_HOME_PATHS: &[&str] = &[
     ".bash_history",
     ".python_history",
     ".node_repl_history",
+    ".zshrc",
+    ".zshenv",
+    ".zprofile",
+    ".bashrc",
+    ".bash_profile",
+    ".profile",
+    ".config/fish",
+    ".local/share/fish",
+    ".psql_history",
+    ".sqlite_history",
+    ".mysql_history",
+    ".lesshst",
+    ".local/share/keyrings",
+    "Library/Application Support/1Password",
+    "Library/Application Support/Bitwarden",
+    ".config/1Password",
+    ".config/Bitwarden",
+    ".config/rclone",
+    ".config/doctl",
+    ".config/fly",
+    ".config/solana",
+    ".bitcoin",
+    ".ethereum",
     "Library/Keychains",
     "Library/Cookies",
     "Library/Safari",
@@ -144,19 +167,24 @@ fn is_credential_or_temp_file(file_path: &Path, auth_file: &Path, canonical_auth
         return true;
     }
 
-    // The ChatGPT owner stores credentials under user_data_dir, which may not
-    // share a parent with a custom LH_AUTH_FILE. Never expose these files via
-    // the generic external-file bridge, even in that configuration.
-    if file_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .is_some_and(|name| {
-            let lower = name.to_ascii_lowercase();
-            lower == "chatgpt-credentials.json"
-                || (lower.starts_with(".chatgpt-credentials.json.") && lower.ends_with(".tmp"))
-        })
-    {
-        return true;
+    if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
+        let lower = file_name.to_ascii_lowercase();
+        if lower == "auth.json"
+            || lower.ends_with("-credentials.json")
+            || lower == "learnharness.db"
+            || lower == "learnharness.db-wal"
+            || lower == "learnharness.db-shm"
+            || lower == "learnharness.db-journal"
+        {
+            return true;
+        }
+        if lower.contains(".tmp")
+            && (lower.contains("auth.json")
+                || lower.contains("-credentials.json")
+                || lower.starts_with(".auth"))
+        {
+            return true;
+        }
     }
 
     let auth_parent = auth_file.parent();
@@ -169,16 +197,7 @@ fn is_credential_or_temp_file(file_path: &Path, auth_file: &Path, canonical_auth
     if parent_matches {
         if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
             let lower = file_name.to_ascii_lowercase();
-            if lower == "auth.json" || lower.ends_with("-credentials.json") {
-                return true;
-            }
-            if lower.contains(".tmp")
-                && (lower.contains("auth.json")
-                    || lower.contains("-credentials.json")
-                    || lower.starts_with(".auth")
-                    || lower.starts_with("auth")
-                    || lower.ends_with(".tmp"))
-            {
+            if lower.contains(".tmp") && (lower.starts_with("auth") || lower.ends_with(".tmp")) {
                 return true;
             }
         }
@@ -298,15 +317,16 @@ fn validate_external_path(
         return Err("Access denied: protected location".to_string());
     }
 
-    if let Some(home) = home_dir {
-        let canonical_home = fs::canonicalize(home).unwrap_or_else(|_| home.to_path_buf());
-        if is_sensitive_home_subpath(raw_path, home)
-            || is_sensitive_home_subpath(raw_path, &canonical_home)
-            || is_sensitive_home_subpath(&canonical, &canonical_home)
-            || is_sensitive_home_subpath(&canonical, home)
-        {
-            return Err("Access denied: protected location".to_string());
-        }
+    let Some(home) = home_dir else {
+        return Err("Access denied: unable to resolve home directory".to_string());
+    };
+    let canonical_home = fs::canonicalize(home).unwrap_or_else(|_| home.to_path_buf());
+    if is_sensitive_home_subpath(raw_path, home)
+        || is_sensitive_home_subpath(raw_path, &canonical_home)
+        || is_sensitive_home_subpath(&canonical, &canonical_home)
+        || is_sensitive_home_subpath(&canonical, home)
+    {
+        return Err("Access denied: protected location".to_string());
     }
 
     if let Some(val) = load_settings(data_dir) {
@@ -413,6 +433,7 @@ pub fn walk_external(
 ) -> Result<Vec<String>, String> {
     let canon_root =
         validate_external_dir_path(&root_dir.to_string_lossy(), data_dir, auth_file, home_dir)?;
+    let canonical_auth = fs::canonicalize(auth_file).unwrap_or_else(|_| auth_file.to_path_buf());
 
     let max_files = max_entries.unwrap_or(5000);
     let mut results = Vec::new();
@@ -433,15 +454,24 @@ pub fn walk_external(
                 continue;
             }
 
+            let Ok(ft) = entry.file_type() else {
+                continue;
+            };
+            if ft.is_symlink() {
+                continue;
+            }
+
             let path = entry.path();
+            if is_credential_or_temp_file(&path, auth_file, &canonical_auth) {
+                continue;
+            }
             if let Some(home) = home_dir {
                 if is_sensitive_home_subpath(&path, home) {
                     continue;
                 }
             }
 
-            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-            if is_dir {
+            if ft.is_dir() {
                 queue.push(path);
             } else {
                 results.push(to_posix(&path));
@@ -533,6 +563,7 @@ pub async fn lh_fs_list_external_dir(
     let (data_dir, auth_file, _) = resolve_app_dirs(&app);
     let home = dirs_home();
     let safe_dir = validate_external_dir_path(&path, &data_dir, &auth_file, home.as_deref())?;
+    let canonical_auth = fs::canonicalize(&auth_file).unwrap_or_else(|_| auth_file.to_path_buf());
 
     let entries = fs::read_dir(&safe_dir).map_err(|e| e.to_string())?;
     let mut out = Vec::new();
@@ -542,8 +573,17 @@ pub async fn lh_fs_list_external_dir(
         if is_env_file_name(&name) {
             continue;
         }
+        let Ok(ft) = entry.file_type() else {
+            continue;
+        };
+        if ft.is_symlink() {
+            continue;
+        }
 
         let p = entry.path();
+        if is_credential_or_temp_file(&p, &auth_file, &canonical_auth) {
+            continue;
+        }
         if let Some(h) = home.as_deref() {
             if is_sensitive_home_subpath(&p, h) {
                 continue;
@@ -844,6 +884,51 @@ mod tests {
         assert!(res_temp
             .unwrap_err()
             .contains("Access denied: protected location"));
+
+        // Legacy auth.json and *-credentials.json in data_dir and SQLite DB files are also blocked
+        let legacy_auth = data_dir.join("auth.json");
+        fs::write(&legacy_auth, "{}").unwrap();
+        assert!(validate_external_read_path(
+            legacy_auth.to_str().unwrap(),
+            &data_dir,
+            &auth_file,
+            None
+        )
+        .is_err());
+
+        let legacy_cred = data_dir.join("github-copilot-credentials.json");
+        fs::write(&legacy_cred, "{}").unwrap();
+        assert!(validate_external_read_path(
+            legacy_cred.to_str().unwrap(),
+            &data_dir,
+            &auth_file,
+            None
+        )
+        .is_err());
+
+        let sqlite_db = user_data_dir.join("learnharness.db");
+        fs::write(&sqlite_db, "SQLite format 3").unwrap();
+        assert!(validate_external_read_path(
+            sqlite_db.to_str().unwrap(),
+            &data_dir,
+            &auth_file,
+            None
+        )
+        .is_err());
+
+        // Fails closed when home_dir is None for ordinary files
+        let ordinary_file = data_dir.join("notes.txt");
+        fs::write(&ordinary_file, "notes").unwrap();
+        let res_no_home = validate_external_read_path(
+            ordinary_file.to_str().unwrap(),
+            &data_dir,
+            &auth_file,
+            None,
+        );
+        assert!(res_no_home.is_err());
+        assert!(res_no_home
+            .unwrap_err()
+            .contains("Access denied: unable to resolve home directory"));
     }
 
     #[test]
