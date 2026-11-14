@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "labels": [
+    "$\\frac{x^2}{\\sigma_x}$",
+    "$\\omega_0$ (rad/s)",
+    "$\\int_0^1\\sqrt{1+u^2}\\,du$"
+  ],
+  "corpus": [
+    "$\\frac{x^2}{\\sigma_x}$",
+    "$\\omega_0$ (rad/s)",
+    "$\\int_0^1\\sqrt{1+u^2}\\,du$",
+    "$x^{y_{z^2}}$",
+    "B8O0",
+    "$\\frac{a+b+c+d+e+f+g+h}{1+x}$",
+    "first line\nsecond $x^2$"
+  ],
+  "initialCamera": {
+    "x": 1.5,
+    "y": 1.5,
+    "z": 1.2
+  },
+  "actions": [
+    "initial",
+    "rotate",
+    "zoom",
+    "reset",
+    "resize",
+    "replace",
+    "remove",
+    "react",
+    "purge"
+  ],
+  "titleSizes": [12, 20, 32],
+  "viewports": [
+    [900, 650],
+    [450, 325]
+  ],
+  "devicePixelRatios": [1, 2],
+  "repetitions": 5,
+  "steps": 120,
+  "titleBoundsSweep": {
+    "radius": 2.5,
+    "azimuths": [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360],
+    "elevations": [15, 35, 65],
+    "viewport": [450, 325],
+    "size": 12,
+    "devicePixelRatio": 2,
+    "policy": "app-csp-sandbox"
+  }
+}

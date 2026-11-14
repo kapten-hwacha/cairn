@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "variants": [
+    {
+      "caseId": "10-narrow-peak",
+      "attempt": 1,
+      "plotIndex": 1,
+      "input": {
+        "xLabel": "$x$",
+        "xScale": "linear",
+        "xDomain": [0, 1],
+        "panels": [
+          {
+            "title": "Full range $x \\in [0,1]$: the peak is a spike of width about $2\\times10^{-4}$",
+            "yLabel": "$y$",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "$y=\\exp\\left(-\\left(\\frac{x-0.1234}{0.0001}\\right)^{2}\\right)$",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)",
+                "sampleAt": [
+                  0.123, 0.12302, 0.12304, 0.12306, 0.12308, 0.1231, 0.12312,
+                  0.12314, 0.12316, 0.12318, 0.1232, 0.12322, 0.12324, 0.12326,
+                  0.12328, 0.1233, 0.12332, 0.12334, 0.12336, 0.12338, 0.1234,
+                  0.12342, 0.12344, 0.12346, 0.12348, 0.1235, 0.12352, 0.12354,
+                  0.12356, 0.12358, 0.1236, 0.12362, 0.12364, 0.12366, 0.12368,
+                  0.1237, 0.12372, 0.12374, 0.12376, 0.12378, 0.1238
+                ],
+                "id": "gaussian"
+              }
+            ],
+            "annotations": [
+              {
+                "kind": "curve-point",
+                "curveId": "gaussian",
+                "x": 0.1234,
+                "label": "Peak"
+              }
+            ]
+          },
+          {
+            "title": "Zoom on $x \\in [0.1232,\\,0.1236]$: the actual Gaussian shape",
+            "yLabel": "$y$",
+            "yScale": "linear",
+            "xDomain": [0.1232, 0.1236],
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "$y=\\exp\\left(-\\left(\\frac{x-0.1234}{0.0001}\\right)^{2}\\right)$",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)",
+                "id": "gaussian"
+              }
+            ],
+            "annotations": [
+              {
+                "kind": "curve-point",
+                "curveId": "gaussian",
+                "x": 0.1234,
+                "label": "Peak"
+              },
+              {
+                "kind": "level-crossing",
+                "curveId": "gaussian",
+                "level": "exp(-1)",
+                "xBracket": [0.1232, 0.1234],
+                "label": "Left width point"
+              },
+              {
+                "kind": "level-crossing",
+                "curveId": "gaussian",
+                "level": "exp(-1)",
+                "xBracket": [0.1234, 0.1236],
+                "label": "Right width point"
+              }
+            ]
+          }
+        ]
+      },
+      "reason": "Replaced model-authored annotation coordinates with curve points and bracketed level crossings; included both exp(-1) crossings. Original input retained."
+    }
+  ]
+}

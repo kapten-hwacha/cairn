@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "caseSetVersion": "plot-v1",
+  "cases": [
+    {
+      "id": "01-sine",
+      "partition": "development",
+      "prompt": "Plot sin(x) from -pi to pi. Label the horizontal axis x (rad) and the vertical axis sin(x).",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Linear axes; zeros at -pi, 0, pi; extrema at ±pi/2 with values ±1; landmark tolerance 0.02."
+        ],
+        "landmarks": [
+          {
+            "description": "left zero",
+            "x": -3.141592653589793,
+            "y": 0,
+            "tolerance": 0.02
+          },
+          {
+            "description": "minimum",
+            "x": -1.5707963267948966,
+            "y": -1,
+            "tolerance": 0.02
+          },
+          {
+            "description": "origin",
+            "x": 0,
+            "y": 0,
+            "tolerance": 0.02
+          },
+          {
+            "description": "maximum",
+            "x": 1.5707963267948966,
+            "y": 1,
+            "tolerance": 0.02
+          },
+          {
+            "description": "right zero",
+            "x": 3.141592653589793,
+            "y": 0,
+            "tolerance": 0.02
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "02-quadratic",
+      "partition": "development",
+      "prompt": "Plot y = x^2 - 4 from x = -3 to 3. Label the axes x and y.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Roots ±2; vertex (0, -4); endpoints y=5; tolerance 0.05."
+        ],
+        "landmarks": [
+          {
+            "description": "left root",
+            "x": -2,
+            "y": 0,
+            "tolerance": 0.05
+          },
+          {
+            "description": "vertex",
+            "x": 0,
+            "y": -4,
+            "tolerance": 0.05
+          },
+          {
+            "description": "right root",
+            "x": 2,
+            "y": 0,
+            "tolerance": 0.05
+          },
+          {
+            "description": "endpoint",
+            "x": 3,
+            "y": 5,
+            "tolerance": 0.05
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "03-composed",
+      "partition": "development",
+      "prompt": "Plot y = exp(-x/2)*sin(3*x) from x = 0 to 6. Label the axes x (s) and y (V).",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Decaying oscillation; y(0)=0, y(pi/6)=0.7696654125, y(pi/2)=-0.4559381278; tolerance 0.02."
+        ],
+        "landmarks": [
+          {
+            "description": "origin",
+            "x": 0,
+            "y": 0,
+            "tolerance": 0.02
+          },
+          {
+            "description": "positive oscillation",
+            "x": 0.5235987755982988,
+            "y": 0.7696654124932398,
+            "tolerance": 0.02
+          },
+          {
+            "description": "negative oscillation",
+            "x": 1.5707963267948966,
+            "y": -0.45593812776599624,
+            "tolerance": 0.02
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "04-multiple",
+      "partition": "development",
+      "prompt": "Plot sin(x) and cos(x) together from 0 to 2*pi, using distinct curves and a legend. Label x in radians and y as amplitude.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Both curves identified; at x=0 values 0 and 1; at pi/2 values 1 and 0; tolerance 0.02."
+        ],
+        "landmarks": [
+          {
+            "description": "sin at zero",
+            "x": 0,
+            "y": 0,
+            "tolerance": 0.02
+          },
+          {
+            "description": "cos at zero",
+            "x": 0,
+            "y": 1,
+            "tolerance": 0.02
+          },
+          {
+            "description": "sin at pi/2",
+            "x": 1.5707963267948966,
+            "y": 1,
+            "tolerance": 0.02
+          },
+          {
+            "description": "cos at pi/2",
+            "x": 1.5707963267948966,
+            "y": 0,
+            "tolerance": 0.02
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "05-points",
+      "partition": "held-out",
+      "prompt": "Plot these measured samples as one curve: time (s), voltage (V): (0,0), (1,2), (2,1), (3,3), (4,2). Preserve all five measurements.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "All five data points preserved, correct order and units; value tolerance 0.001."
+        ],
+        "landmarks": [
+          {
+            "description": "measured sample",
+            "x": 0,
+            "y": 0,
+            "tolerance": 0.001
+          },
+          {
+            "description": "measured sample",
+            "x": 1,
+            "y": 2,
+            "tolerance": 0.001
+          },
+          {
+            "description": "measured sample",
+            "x": 2,
+            "y": 1,
+            "tolerance": 0.001
+          },
+          {
+            "description": "measured sample",
+            "x": 3,
+            "y": 3,
+            "tolerance": 0.001
+          },
+          {
+            "description": "measured sample",
+            "x": 4,
+            "y": 2,
+            "tolerance": 0.001
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "06-log",
+      "partition": "development",
+      "prompt": "Plot y = x^2 for x from 0.1 to 100, with logarithmic scales on both axes. Label the axes x and y.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Both log scales; points (0.1,0.01), (1,1), (10,100), (100,10000); absolute tolerance max(0.001, 1% of each expected y)."
+        ],
+        "landmarks": [
+          {
+            "description": "power-law point",
+            "x": 0.1,
+            "y": 0.010000000000000002,
+            "tolerance": 0.001
+          },
+          {
+            "description": "power-law point",
+            "x": 1,
+            "y": 1,
+            "tolerance": 0.01
+          },
+          {
+            "description": "power-law point",
+            "x": 10,
+            "y": 100,
+            "tolerance": 1
+          },
+          {
+            "description": "power-law point",
+            "x": 100,
+            "y": 10000,
+            "tolerance": 100
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "07-bode",
+      "partition": "development",
+      "prompt": "Show the Bode magnitude and phase plots of H(jf) = 1/(1+j*f/1000), from 10 Hz to 100 kHz. Use a logarithmic frequency axis, magnitude in dB, and phase in degrees.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Two panels; same log frequency range; f=1000: -3.0102999566 dB and -45 degrees; f=10000: -20.0432137378 dB and -84.2894068625 degrees; tolerances 0.1 dB/0.5 degrees."
+        ],
+        "landmarks": [
+          {
+            "description": "magnitude dB at corner",
+            "x": 1000,
+            "y": -3.0102999566398125,
+            "tolerance": 0.1
+          },
+          {
+            "description": "phase degrees at corner",
+            "x": 1000,
+            "y": -45,
+            "tolerance": 0.5
+          },
+          {
+            "description": "magnitude dB at 10x corner",
+            "x": 10000,
+            "y": -20.043213737826427,
+            "tolerance": 0.1
+          },
+          {
+            "description": "phase degrees at 10x corner",
+            "x": 10000,
+            "y": -84.28940686250037,
+            "tolerance": 0.5
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "08-annotation",
+      "partition": "development",
+      "prompt": "Plot y = x^2 from x = -2 to 2 and annotate its minimum at (0,0) with the text minimum. Label the axes x and y.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Parabola, correct domain, visible annotation attached to (0,0); tolerance 0.02."
+        ],
+        "landmarks": [
+          {
+            "description": "annotated minimum",
+            "x": 0,
+            "y": 0,
+            "tolerance": 0.02
+          }
+        ],
+        "misleadingFailures": [
+          "The figure contradicts the stated equation, data, axes, or units."
+        ]
+      }
+    },
+    {
+      "id": "09-discontinuity",
+      "partition": "development",
+      "prompt": "Plot y = 1/(x-0.123) from x = -1 to 1, showing its vertical asymptote without drawing a connecting line across the discontinuity. Label the axes x and y.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Discontinuity at 0.123; branches remain separate; y(-0.877)=-1 and y(1)=1.1402508552; tolerance 0.02; a stated renderer limitation is useful evidence but does not count as a delivered faithful plot."
+        ],
+        "landmarks": [
+          {
+            "description": "left branch",
+            "x": -0.877,
+            "y": -1,
+            "tolerance": 0.02
+          },
+          {
+            "description": "right endpoint",
+            "x": 1,
+            "y": 1.1402508551881414,
+            "tolerance": 0.02
+          }
+        ],
+        "misleadingFailures": [
+          "A line connects opposite sides of the asymptote."
+        ]
+      }
+    },
+    {
+      "id": "10-narrow-peak",
+      "partition": "held-out",
+      "prompt": "Plot y = exp(-((x-0.1234)/0.0001)^2) from x = 0 to 1. Make the narrow peak at x = 0.1234 visible. Label the axes x and y.",
+      "expectedOutcome": "plot",
+      "review": {
+        "requirements": [
+          "Peak reaches 1 at 0.1234 (tolerance 0.05); preserve requested overall domain; show detail if needed; a flat curve presented as faithful is misleading."
+        ],
+        "landmarks": [
+          {
+            "description": "peak",
+            "x": 0.1234,
+            "y": 1,
+            "tolerance": 0.05
+          }
+        ],
+        "misleadingFailures": [
+          "A flat curve is presented as faithfully showing the peak."
+        ]
+      }
+    },
+    {
+      "id": "11-missing",
+      "partition": "development",
+      "prompt": "Plot the Bode response of my low-pass filter.",
+      "expectedOutcome": "clarification-or-limitation",
+      "review": {
+        "requirements": [
+          "Ask for transfer function or enough circuit/filter parameters; do not invent order or cutoff. End at first substantive clarification."
+        ],
+        "landmarks": [],
+        "misleadingFailures": [
+          "A filter order or cutoff is invented without acknowledgment."
+        ]
+      }
+    },
+    {
+      "id": "12-conflict",
+      "partition": "development",
+      "prompt": "Plot y = x on a logarithmic x-axis from x = -10 to 10, keeping all the negative x values.",
+      "expectedOutcome": "clarification-or-limitation",
+      "review": {
+        "requirements": [
+          "Explain incompatibility and ask for/offer a valid alternative; do not silently discard negatives or relabel a linear axis as log. End at first substantive clarification or limitation."
+        ],
+        "landmarks": [],
+        "misleadingFailures": [
+          "Negative values are silently discarded or a linear axis is labeled logarithmic."
+        ]
+      }
+    }
+  ]
+}

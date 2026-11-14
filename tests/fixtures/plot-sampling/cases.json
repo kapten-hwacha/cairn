@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "02-quadratic",
+      "input": {
+        "xLabel": "x",
+        "xScale": "linear",
+        "xDomain": [-3, 3],
+        "panels": [
+          {
+            "title": "y = x^2 - 4",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [-6, 6],
+            "curves": [
+              {
+                "label": "y = x^2 - 4",
+                "expression": "x^2 - 4"
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0,
+                "y": -4,
+                "label": "vertex (0, -4)"
+              },
+              {
+                "x": -2,
+                "y": 0,
+                "label": "(-2, 0)"
+              },
+              {
+                "x": 2,
+                "y": 0,
+                "label": "(2, 0)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "09-analytic-branches",
+      "input": {
+        "xLabel": "x",
+        "xScale": "linear",
+        "xDomain": [-1, 1],
+        "panels": [
+          {
+            "title": "y = 1/(x − 0.123)",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [-20, 20],
+            "curves": [
+              {
+                "label": "x < 0.123",
+                "expression": "1/(x-0.123)",
+                "xDomain": [-1, 0.123]
+              },
+              {
+                "label": "x > 0.123",
+                "expression": "1/(x-0.123)",
+                "xDomain": [0.123, 1]
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.123,
+                "y": 0,
+                "label": "x = 0.123"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "10-narrow-peak-0",
+      "input": {
+        "panels": [
+          {
+            "title": "Zoom: x from 0.1233 to 0.1235 — the peak is resolved",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "y = exp(-((x-0.1234)/0.0001)^2)",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)"
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.1234,
+                "y": 1,
+                "label": "peak (max) at x = 0.1234"
+              },
+              {
+                "x": 0.1233167,
+                "y": 0.5,
+                "label": "y = 0.5 at x = 0.12340 - 8.33e-5"
+              },
+              {
+                "x": 0.1234833,
+                "y": 0.5,
+                "label": "y = 0.5 at x = 0.12340 + 8.33e-5"
+              }
+            ]
+          }
+        ],
+        "xDomain": [0.1233, 0.1235],
+        "xLabel": "x",
+        "xScale": "linear"
+      }
+    },
+    {
+      "id": "10-narrow-peak-1",
+      "input": {
+        "panels": [
+          {
+            "title": "Overview: x from 0 to 1, linear y",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "y = exp(-((x-0.1234)/0.0001)^2)",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)"
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.1234,
+                "y": 1,
+                "label": "peak at x = 0.1234 (width ~2e-4)"
+              }
+            ]
+          }
+        ],
+        "xDomain": [0, 1],
+        "xLabel": "x",
+        "xScale": "linear"
+      }
+    },
+    {
+      "id": "other-peak-0",
+      "input": {
+        "xLabel": "x",
+        "xScale": "linear",
+        "xDomain": [0, 1],
+        "panels": [
+          {
+            "title": "Narrow feature at 0.487321",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "Gaussian",
+                "expression": "exp(-((x-0.487321)/0.0001)^2)",
+                "sampleAt": [0.487321]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "other-peak-1",
+      "input": {
+        "xLabel": "x",
+        "xScale": "linear",
+        "xDomain": [0, 1],
+        "panels": [
+          {
+            "title": "Narrow feature at 0.71903",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "Gaussian",
+                "expression": "exp(-((x-0.71903)/0.0001)^2)",
+                "sampleAt": [0.71903]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "10-independent-panels",
+      "input": {
+        "panels": [
+          {
+            "title": "Overview: x from 0 to 1, linear y",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "y = exp(-((x-0.1234)/0.0001)^2)",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)"
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.1234,
+                "y": 1,
+                "label": "peak at x = 0.1234 (width ~2e-4)"
+              }
+            ]
+          },
+          {
+            "title": "Zoom: x from 0.1233 to 0.1235 — the peak is resolved",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [0, 1.05],
+            "curves": [
+              {
+                "label": "y = exp(-((x-0.1234)/0.0001)^2)",
+                "expression": "exp(-((x-0.1234)/0.0001)^2)"
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.1234,
+                "y": 1,
+                "label": "peak (max) at x = 0.1234"
+              },
+              {
+                "x": 0.1233167,
+                "y": 0.5,
+                "label": "y = 0.5 at x = 0.12340 - 8.33e-5"
+              },
+              {
+                "x": 0.1234833,
+                "y": 0.5,
+                "label": "y = 0.5 at x = 0.12340 + 8.33e-5"
+              }
+            ],
+            "xDomain": [0.1233, 0.1235]
+          }
+        ],
+        "xDomain": [0, 1],
+        "xLabel": "x",
+        "xScale": "linear"
+      }
+    }
+  ]
+}

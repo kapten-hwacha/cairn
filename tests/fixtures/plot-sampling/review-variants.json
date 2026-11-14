@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "variants": [
+    {
+      "caseId": "09-discontinuity",
+      "attempt": 1,
+      "plotIndex": 1,
+      "input": {
+        "xLabel": "x",
+        "xScale": "linear",
+        "xDomain": [-1, 1],
+        "panels": [
+          {
+            "title": "y = 1/(x − 0.123)",
+            "yLabel": "y",
+            "yScale": "linear",
+            "yDomain": [-20, 20],
+            "curves": [
+              {
+                "label": "x < 0.123",
+                "expression": "1/(x-0.123)",
+                "xDomain": [-1, 0.123]
+              },
+              {
+                "label": "x > 0.123",
+                "expression": "1/(x-0.123)",
+                "xDomain": [0.123, 1]
+              }
+            ],
+            "annotations": [
+              {
+                "x": 0.123,
+                "y": 0,
+                "label": "x = 0.123"
+              }
+            ]
+          }
+        ]
+      },
+      "reason": "Replaced model-generated approximation points with the stated analytic function, split at x=0.123; original input retained."
+    }
+  ]
+}
