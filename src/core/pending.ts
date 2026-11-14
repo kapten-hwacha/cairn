@@ -66,7 +66,7 @@ export function toolQuestionKind(tool: string): "quiz" | "ask" | "explain" {
 }
 
 /** Tools fulfilled by background sub-agent jobs (W2/W6). */
-export const JOB_TOOLS = ["research", "demo", "visual"] as const;
+export const JOB_TOOLS = ["research", "demo", "visual", "plot"] as const;
 
 // ─── Tool availability (2026-09 settings seam) ─────────────────────────────
 
@@ -168,6 +168,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 	research: "Dispatching research…",
 	demo: "Building a demo…",
 	visual: "Making a visual…",
+	plot: "Making a plot…",
 	pdf: "Reading a PDF…",
 	plan_init: "Drawing up the plan…",
 	probe_done: "Concluding the assessment…",

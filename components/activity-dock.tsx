@@ -283,6 +283,7 @@ const KIND_ICON: Record<JobKind, typeof SearchIcon> = {
 	research: SearchIcon,
 	demo: PlayIcon,
 	visual: PenToolIcon,
+	plot: PenToolIcon,
 	pdf: FileTextIcon, // sources v0 — type-forced entry (JobKind grew "pdf")
 };
 
@@ -407,6 +408,8 @@ function ActivityBlobRow({
 				? "Researcher"
 				: blob.jobKind === "demo"
 					? "Demo builder"
+					: blob.jobKind === "plot"
+						? "Plot"
 					: blob.jobKind === "visual"
 						? "Figure maker"
 						: blob.jobKind === "pdf"

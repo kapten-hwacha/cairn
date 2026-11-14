@@ -41,6 +41,11 @@ export function VisualCard({ part }: ArtifactPartProps) {
 	return <DispatchCard toolCallId={part.toolCallId} kind="visual" />;
 }
 
+export function PlotCard({ part }: ArtifactPartProps) {
+	if (part.state !== "output-available") return null;
+	return <DispatchCard toolCallId={part.toolCallId} kind="plot" />;
+}
+
 /** The figure itself — exported: the steer card renders the delivered artifact. */
 export function VisualOutputCard({
 	output,

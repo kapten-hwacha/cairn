@@ -674,6 +674,35 @@ describe("demo builder (fake model + fake headless)", () => {
 const SVG_1 = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><line x1="10" y1="50" x2="290" y2="50"/></svg>';
 
 describe("visual maker (fake model + fake headless)", () => {
+	it("does not deliver a render queued on the final iteration", async () => {
+		const model = scriptedModel([
+			{ toolCalls: [{ toolCallId: "w", toolName: "write_svg", input: { svg: SVG_1 } }] },
+			{ toolCalls: [{ toolCallId: "r", toolName: "render_svg", input: {} }] },
+		]);
+		const result = await runVisualMaker({ brief: "b" }, { engine: model, headless: fakeHeadless(), maxIterations: 2 });
+		assert.equal(result.svg, "");
+		assert.match(result.notes ?? "", /iteration limit/);
+	});
+
+	it("does not deliver a forced render queued on the final iteration", async () => {
+		const model = scriptedModel([
+			{ toolCalls: [{ toolCallId: "w", toolName: "write_svg", input: { svg: SVG_1 } }] },
+			{ text: "Done." },
+		]);
+		const result = await runVisualMaker({ brief: "b" }, { engine: model, headless: fakeHeadless(), maxIterations: 2 });
+		assert.equal(result.svg, "");
+		assert.match(result.notes ?? "", /iteration limit/);
+	});
+
+	it("retains the last rendering error when iterations run out", async () => {
+		const model = scriptedModel([
+			{ toolCalls: [{ toolCallId: "w", toolName: "write_svg", input: { svg: SVG_1 } }] },
+			{ toolCalls: [{ toolCallId: "r", toolName: "render_svg", input: {} }] },
+		]);
+		const result = await runVisualMaker({ brief: "b" }, { engine: model, headless: fakeHeadless({ renderFailures: 1 }), maxIterations: 2 });
+		assert.equal(result.svg, "");
+		assert.match(result.notes ?? "", /Last render error: XML parse error/);
+	});
 	it("write → render → look → finish delivers the svg with notes", async () => {
 		const headless = fakeHeadless();
 		const model = scriptedModel([
@@ -798,6 +827,20 @@ async function drainRunning(chatId: string): Promise<string> {
 
 
 describe("demo/visual job runners", () => {
+	it("runs a plot job without a model and delivers its SVG", async () => {
+		const chat = await chatStore.createChat("Test: plot runner");
+		createdChats.push(chat.id);
+		const input = { xLabel: "x", xScale: "linear" as const, xDomain: [-2, 2] as [number, number], panels: [{ title: "Square", yLabel: "y", yScale: "linear" as const, curves: [{ label: "x²", expression: "x^2" }] }] };
+		const job = await jobStore.createJob({ kind: "plot", chatId: chat.id, toolCallId: "call-plot", input });
+		createdJobs.push(job.id);
+		const { runner, steers } = testRunner();
+		await runner.runJob(job.id, input);
+		const done = await jobStore.getJob(job.id);
+		assert.equal(done?.status, "done");
+		assert.match((done?.result as { svg: string }).svg, /^<svg/);
+		assert.equal(steers.length, 1);
+		assert.match(steers[0]!.content as string, /plot was generated/);
+	});
 	it("runJob completes a demo: result on the job, steer via deliver, ack stays on the part", async () => {
 		const chat = await chatStore.createChat("Test: demo runner");
 		createdChats.push(chat.id);
@@ -1004,8 +1047,8 @@ describe("tool + renderer registry wiring", () => {
 	it("demo and visual are SERVER-EXECUTED dispatch tools with the contract schemas", () => {
 		const { runner } = testRunner();
 		const tools = jobTools({ chatId: "chat_registry", jobStore, spawn: (job) => void runner.runJob(job.id) });
-		assert.deepEqual(Object.keys(tools).sort(), ["demo", "pdf", "research", "visual"]);
-		for (const name of ["demo", "visual", "research", "pdf"] as const) {
+		assert.deepEqual(Object.keys(tools).sort(), ["demo", "pdf", "plot", "research", "visual"]);
+		for (const name of ["demo", "visual", "research", "pdf", "plot"] as const) {
 			assert.equal(typeof (tools[name] as { execute?: unknown }).execute, "function", `${name} executes server-side — fire-and-forget ack per THE ASYNC PROTOCOL`);
 		}
 		assert.equal(Value.Check(demoInputSchema, { title: "T", brief: "b" }), true);

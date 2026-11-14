@@ -1,11 +1,20 @@
 "use client";
 
 import { CheckIcon, CircleX } from "lucide-react";
-import type { PdfResult, ResearchResult, SubagentArtifactData } from "@/src/core";
+import type {
+	PdfResult,
+	ResearchResult,
+	SubagentArtifactData,
+} from "@/src/core";
 import type { LhViewMessage } from "@/src/core";
 import { isSubagentFailure } from "@/src/core";
+import { isPlot3DResult } from "@/src/core";
+import { InteractivePlotCard } from "./interactive-plot-card";
 import { DemoOutputCard } from "@/components/artifacts/demo-card";
-import { PdfBriefCard, ResearchBriefCard } from "@/components/artifacts/job-card";
+import {
+	PdfBriefCard,
+	ResearchBriefCard,
+} from "@/components/artifacts/job-card";
 import { VisualOutputCard } from "@/components/artifacts/visual-card";
 
 /**
@@ -26,18 +35,21 @@ import { VisualOutputCard } from "@/components/artifacts/visual-card";
  *     render; only a failure note does.
  */
 export function SubagentSteerCard({ message }: { message: LhViewMessage }) {
-	const artifactPart = message.parts.find((p) => p.type === "data-subagent-artifact");
+	const artifactPart = message.parts.find(
+		(p) => p.type === "data-subagent-artifact",
+	);
 	const data = artifactPart?.data as SubagentArtifactData | undefined;
 	// The abort steer (2026-09 dock semantics): its message-type part is
 	// data-subagent-aborted (the custom-message scheme — the part, not
 	// metadata, is the marker) — a quiet chip, mirroring the complete-badge.
 	if (!data) {
-		const aborted = message.parts.find((p) => p.type === "data-subagent-aborted") as
-			| { data?: { kind?: string } }
-			| undefined;
-		if (aborted?.data) return <AbortedBadge kind={aborted.data.kind ?? "job"} />;
+		const aborted = message.parts.find(
+			(p) => p.type === "data-subagent-aborted",
+		) as { data?: { kind?: string } } | undefined;
+		if (aborted?.data)
+			return <AbortedBadge kind={aborted.data.kind ?? "job"} />;
 		return (
-				<div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+			<div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
 				A sub-agent finished, but its result could not be displayed.
 			</div>
 		);
@@ -56,9 +68,35 @@ export function SubagentSteerCard({ message }: { message: LhViewMessage }) {
 				<PdfCompleteBadge result={data.result as PdfResult} />
 			);
 		case "demo":
-			return <DemoOutputCard output={data.result} messageId={message.id} initialInverted={data.ui?.inverted ?? false} />;
+			return (
+				<DemoOutputCard
+					output={data.result}
+					messageId={message.id}
+					initialInverted={data.ui?.inverted ?? false}
+				/>
+			);
 		case "visual":
-			return <VisualOutputCard output={data.result} messageId={message.id} initialInverted={data.ui?.inverted ?? false} />;
+			return (
+				<VisualOutputCard
+					output={data.result}
+					messageId={message.id}
+					initialInverted={data.ui?.inverted ?? false}
+				/>
+			);
+		case "plot":
+			return isPlot3DResult(data.result) ? (
+				<InteractivePlotCard
+					result={data.result}
+					messageId={message.id}
+					initialInverted={data.ui?.inverted ?? false}
+				/>
+			) : (
+				<VisualOutputCard
+					output={data.result}
+					messageId={message.id}
+					initialInverted={data.ui?.inverted ?? false}
+				/>
+			);
 	}
 }
 
@@ -67,7 +105,10 @@ export function SubagentSteerCard({ message }: { message: LhViewMessage }) {
  * this just marks what happened. */
 function AbortedBadge({ kind }: { kind: string }) {
 	return (
-		<div data-testid="job-aborted-badge" className="flex items-center gap-2 text-xs text-muted-foreground">
+		<div
+			data-testid="job-aborted-badge"
+			className="flex items-center gap-2 text-xs text-muted-foreground"
+		>
 			<CircleX className="size-3.5" />
 			<span className="font-medium uppercase tracking-wide">{kind}</span>
 			<span>aborted by the learner</span>
@@ -84,7 +125,10 @@ function PdfCompleteBadge({ result }: { result: PdfResult }) {
 	// the ?? is runtime tolerance for pre-split persisted steers.
 	const readPages = result.pagesRead ?? result.pagesConsulted;
 	return (
-		<details data-testid="pdf-complete-badge" className="group w-full text-xs text-muted-foreground">
+		<details
+			data-testid="pdf-complete-badge"
+			className="group w-full text-xs text-muted-foreground"
+		>
 			<summary className="flex cursor-pointer select-none list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
 				<CheckIcon className="size-3.5" />
 				<span className="font-medium uppercase tracking-wide">PDF</span>
@@ -94,8 +138,12 @@ function PdfCompleteBadge({ result }: { result: PdfResult }) {
 						· read {readPages.length} page{readPages.length === 1 ? "" : "s"}
 					</span>
 				)}
-				<span className="ml-1 text-xs text-muted-foreground/70 group-open:hidden">view brief</span>
-				<span className="ml-1 hidden text-xs text-muted-foreground/70 group-open:inline">hide brief</span>
+				<span className="ml-1 text-xs text-muted-foreground/70 group-open:hidden">
+					view brief
+				</span>
+				<span className="ml-1 hidden text-xs text-muted-foreground/70 group-open:inline">
+					hide brief
+				</span>
 			</summary>
 			<div className="mt-2">
 				<PdfBriefCard output={result} />
@@ -111,14 +159,23 @@ function PdfCompleteBadge({ result }: { result: PdfResult }) {
  * the artifact part in the record is the single source of truth. */
 function ResearchCompleteBadge({ result }: { result: ResearchResult }) {
 	return (
-		<details data-testid="research-complete-badge" className="group w-full text-xs text-muted-foreground">
+		<details
+			data-testid="research-complete-badge"
+			className="group w-full text-xs text-muted-foreground"
+		>
 			<summary className="flex cursor-pointer select-none list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
 				<CheckIcon className="size-3.5" />
 				<span className="font-medium uppercase tracking-wide">Research</span>
 				<span>complete</span>
-				{result.sources.length > 0 && <span>· {result.sources.length} sources</span>}
-				<span className="ml-1 text-xs text-muted-foreground/70 group-open:hidden">view brief</span>
-				<span className="ml-1 hidden text-xs text-muted-foreground/70 group-open:inline">hide brief</span>
+				{result.sources.length > 0 && (
+					<span>· {result.sources.length} sources</span>
+				)}
+				<span className="ml-1 text-xs text-muted-foreground/70 group-open:hidden">
+					view brief
+				</span>
+				<span className="ml-1 hidden text-xs text-muted-foreground/70 group-open:inline">
+					hide brief
+				</span>
 			</summary>
 			<div className="mt-2">
 				<ResearchBriefCard output={result} />

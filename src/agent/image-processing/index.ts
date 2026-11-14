@@ -1,4 +1,5 @@
 // Ported from @earendil-works/pi-coding-agent 1.1.0, dist/utils/image-process.js (MIT).
+import { Buffer } from "node:buffer";
 import { convertImageBytesToPng } from "./convert.mjs";
 import { formatDimensionNote, resizeImage } from "./resize.ts";
 import type { ProcessImageOptions, ProcessImageResult } from "./types.ts";

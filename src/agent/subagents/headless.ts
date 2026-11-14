@@ -1,9 +1,16 @@
 import * as fs from "node:fs";
+import { Buffer } from "node:buffer";
 import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { standardFontsDir } from "./pdf-ops";
+import {
+	PLOT3D_DEADLINE_MS,
+	validatePlot3DVerification,
+	type Plot3DVerificationRequest,
+	type Plot3DVerification,
+} from "../../core/contracts/plot3d.ts";
 
 /**
  * Verification engines for sub-agents: demos use the app's own Electron
@@ -59,6 +66,14 @@ export interface RenderedPdfPage {
 }
 
 export interface HeadlessApi {
+	rasterizeSvgPixels?(
+		svg: string,
+		options: { width: number; height: number },
+	): Promise<{ width: number; height: number; rgba: Uint8Array }>;
+	verifyPlot3D?(
+		request: Plot3DVerificationRequest,
+		options?: { signal?: AbortSignal },
+	): Promise<Plot3DVerification>;
 	/** True when a browser helper or Chrome is resolvable (cheap, no launch). */
 	available(): boolean;
 	/** Why not — for error messages. */
@@ -68,7 +83,11 @@ export interface HeadlessApi {
 	/** Rasterize an SVG to a PNG buffer (for verify-by-looking). */
 	renderSvg(svg: string, opts?: RenderSvgOptions): Promise<Buffer>;
 	/** Render PDF pages to PNGs natively (pdfjs + Skia) for the pdf-reader. */
-	renderPdfPages(pdfPath: string, pages: number[], opts?: RenderPdfOptions): Promise<RenderedPdfPage[]>;
+	renderPdfPages(
+		pdfPath: string,
+		pages: number[],
+		opts?: RenderPdfOptions,
+	): Promise<RenderedPdfPage[]>;
 }
 
 /** Test seam — undefined in production. */
@@ -80,14 +99,41 @@ export function getHeadless(): HeadlessApi {
 
 // ─── Chrome resolution ───────────────────────────────────────────────────────
 
-const proc = typeof process !== "undefined" ? process : ({ env: {}, platform: "darwin", versions: {} } as any);
+const proc =
+	typeof process !== "undefined"
+		? process
+		: ({ env: {}, platform: "darwin", versions: {} } as any);
 
 const CHROME_CANDIDATES = [
-	...(proc.platform === "win32" ? [
-		path.join(proc.env.PROGRAMFILES ?? "C:\\Program Files", "Google", "Chrome", "Application", "chrome.exe"),
-		path.join(proc.env["PROGRAMFILES(X86)"] ?? "C:\\Program Files (x86)", "Google", "Chrome", "Application", "chrome.exe"),
-		...(proc.env.LOCALAPPDATA ? [path.join(proc.env.LOCALAPPDATA, "Google", "Chrome", "Application", "chrome.exe")] : []),
-	] : []),
+	...(proc.platform === "win32"
+		? [
+				path.join(
+					proc.env.PROGRAMFILES ?? "C:\\Program Files",
+					"Google",
+					"Chrome",
+					"Application",
+					"chrome.exe",
+				),
+				path.join(
+					proc.env["PROGRAMFILES(X86)"] ?? "C:\\Program Files (x86)",
+					"Google",
+					"Chrome",
+					"Application",
+					"chrome.exe",
+				),
+				...(proc.env.LOCALAPPDATA
+					? [
+							path.join(
+								proc.env.LOCALAPPDATA,
+								"Google",
+								"Chrome",
+								"Application",
+								"chrome.exe",
+							),
+						]
+					: []),
+			]
+		: []),
 	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 	"/Applications/Chromium.app/Contents/MacOS/Chromium",
 	"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
@@ -164,7 +210,9 @@ export function browserServiceBinary(): string | null {
 const BROWSER_SERVICE_TIMEOUT_MS = 15_000;
 let browserServiceProc: import("node:child_process").ChildProcess | null = null;
 
-async function connectBrowserService(): Promise<import("puppeteer-core").Browser | null> {
+async function connectBrowserService(): Promise<
+	import("puppeteer-core").Browser | null
+> {
 	const puppeteer = (await import("puppeteer-core")).default;
 	const { spawn } = await import("node:child_process");
 	let port: number | null = null;
@@ -179,11 +227,18 @@ async function connectBrowserService(): Promise<import("puppeteer-core").Browser
 		// Packaged: execPath runs the bundled app (flag reaches main.cjs).
 		// Dev: the bare electron binary needs the repo root as the app arg —
 		// flagless it would open Electron's default app instead of our shell.
-		const appArgs = proc.versions?.electron ? ["--browser-service"] : [
-			// src/agent/subagents → repo root
-			path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".."),
-			"--browser-service",
-		];
+		const appArgs = proc.versions?.electron
+			? ["--browser-service"]
+			: [
+					// src/agent/subagents → repo root
+					path.join(
+						path.dirname(fileURLToPath(import.meta.url)),
+						"..",
+						"..",
+						"..",
+					),
+					"--browser-service",
+				];
 		const childProc = spawn(/*turbopackIgnore: true*/ binary, appArgs, {
 			// Cast: the sanitizer is pure over a loose record; NODE_ENV is
 			// always present in a real process.env.
@@ -199,7 +254,9 @@ async function connectBrowserService(): Promise<import("puppeteer-core").Browser
 			}, BROWSER_SERVICE_TIMEOUT_MS);
 			const onData = (chunk: Buffer) => {
 				buf += chunk.toString("utf8");
-				const line = buf.split("\n").find((l) => parseBrowserServiceLine(l) !== null);
+				const line = buf
+					.split("\n")
+					.find((l) => parseBrowserServiceLine(l) !== null);
 				if (line !== undefined) {
 					clearTimeout(timer);
 					resolve(parseBrowserServiceLine(line));
@@ -238,7 +295,10 @@ async function connectBrowserService(): Promise<import("puppeteer-core").Browser
  *  so concurrent jobs queue here instead of fighting over one webContents. */
 let helperPageChain: Promise<unknown> = Promise.resolve();
 
-async function withBrowserPage<T>(fn: (page: import("puppeteer-core").Page) => Promise<T>): Promise<T> {
+async function withBrowserPage<T>(
+	fn: (page: import("puppeteer-core").Page) => Promise<T>,
+	webgl = false,
+): Promise<T> {
 	// Helper first (owner ruling 2026-10-10: the app's own Chromium primary,
 	// system Chrome fallback) — deterministic across users, zero install.
 	const helper = await connectBrowserService();
@@ -267,7 +327,11 @@ async function withBrowserPage<T>(fn: (page: import("puppeteer-core").Page) => P
 		// Explicit path when we found one; otherwise let puppeteer resolve the
 		// system Chrome install itself via the "chrome" channel.
 		...(executablePath ? { executablePath } : { channel: "chrome" as const }),
-		args: ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"],
+		args: [
+			...(webgl ? [] : ["--disable-gpu"]),
+			"--no-sandbox",
+			"--disable-dev-shm-usage",
+		],
 	});
 	try {
 		const page = await browser.newPage();
@@ -284,7 +348,10 @@ function tempDir(prefix: string): string {
 
 // ─── Demo execution ──────────────────────────────────────────────────────────
 
-async function runDemo(html: string, opts: RunDemoOptions = {}): Promise<DemoRunResult> {
+async function runDemo(
+	html: string,
+	opts: RunDemoOptions = {},
+): Promise<DemoRunResult> {
 	const settleMs = opts.settleMs ?? 2000;
 	const dir = tempDir("lh-demo-");
 	const file = path.join(dir, "demo.html");
@@ -298,26 +365,37 @@ async function runDemo(html: string, opts: RunDemoOptions = {}): Promise<DemoRun
 
 	try {
 		await withBrowserPage(async (page) => {
-		page.on("console", (msg) => {
-			if (msg.type() === "error") consoleErrors.push(msg.text());
-		});
-		page.on("pageerror", (err) => pageErrors.push(err instanceof Error ? err.message : String(err)));
-		page.on("requestfailed", (req) => failedRequests.push(`${req.url()} (${req.failure()?.errorText ?? "failed"})`));
+			page.on("console", (msg) => {
+				if (msg.type() === "error") consoleErrors.push(msg.text());
+			});
+			page.on("pageerror", (err) =>
+				pageErrors.push(err instanceof Error ? err.message : String(err)),
+			);
+			page.on("requestfailed", (req) =>
+				failedRequests.push(
+					`${req.url()} (${req.failure()?.errorText ?? "failed"})`,
+				),
+			);
 
-		try {
-			await page.goto(pathToFileURL(file).href, { waitUntil: "load", timeout: 30_000 });
-			await new Promise((resolve) => setTimeout(resolve, settleMs));
-			if (opts.probe) {
-				try {
-					probeResult = await page.evaluate(opts.probe);
-				} catch (err) {
-					pageErrors.push(`probe failed: ${err instanceof Error ? err.message : String(err)}`);
+			try {
+				await page.goto(pathToFileURL(file).href, {
+					waitUntil: "load",
+					timeout: 30_000,
+				});
+				await new Promise((resolve) => setTimeout(resolve, settleMs));
+				if (opts.probe) {
+					try {
+						probeResult = await page.evaluate(opts.probe);
+					} catch (err) {
+						pageErrors.push(
+							`probe failed: ${err instanceof Error ? err.message : String(err)}`,
+						);
+					}
+					probed = true;
 				}
-				probed = true;
+			} catch (err) {
+				pageErrors.push(err instanceof Error ? err.message : String(err));
 			}
-		} catch (err) {
-			pageErrors.push(err instanceof Error ? err.message : String(err));
-		}
 		});
 	} finally {
 		try {
@@ -332,14 +410,21 @@ async function runDemo(html: string, opts: RunDemoOptions = {}): Promise<DemoRun
 		pageErrors,
 		failedRequests,
 		...(probed ? { probeResult } : {}),
-		ok: consoleErrors.length === 0 && pageErrors.length === 0 && failedRequests.length === 0,
+		ok:
+			consoleErrors.length === 0 &&
+			pageErrors.length === 0 &&
+			failedRequests.length === 0,
 	};
 }
 
 // ─── SVG rasterization ───────────────────────────────────────────────────────
 
-function svgViewport(svg: string, opts: RenderSvgOptions): { width: number; height: number } {
-	if (opts.width && opts.height) return { width: opts.width, height: opts.height };
+function svgViewport(
+	svg: string,
+	opts: RenderSvgOptions,
+): { width: number; height: number } {
+	if (opts.width && opts.height)
+		return { width: opts.width, height: opts.height };
 	const width = Number(svg.match(/\bwidth\s*=\s*"?(\d+(?:\.\d+)?)/)?.[1]);
 	const height = Number(svg.match(/\bheight\s*=\s*"?(\d+(?:\.\d+)?)/)?.[1]);
 	return {
@@ -370,7 +455,11 @@ function svgViewport(svg: string, opts: RenderSvgOptions): { width: number; heig
  *  image lib per process; app code carries none. */
 export function providerSafePng(png: Buffer): Buffer {
 	const SIG_LEN = 8;
-	if (png.length < SIG_LEN + 12 || png.subarray(0, SIG_LEN).toString("hex") !== "89504e470d0a1a0a") return png;
+	if (
+		png.length < SIG_LEN + 12 ||
+		png.subarray(0, SIG_LEN).toString("hex") !== "89504e470d0a1a0a"
+	)
+		return png;
 	// Walk the chunks once, merging the IDAT split into its canonical
 	// single-chunk form (first IDAT's position, concatenated payload).
 	const parts: Array<{ type: string; data: Buffer }> = [];
@@ -378,7 +467,10 @@ export function providerSafePng(png: Buffer): Buffer {
 	while (off + 12 <= png.length) {
 		const len = png.readUInt32BE(off);
 		if (off + 12 + len > png.length) break; // truncated tail — leave as-is
-		parts.push({ type: png.subarray(off + 4, off + 8).toString("ascii"), data: png.subarray(off + 8, off + 8 + len) });
+		parts.push({
+			type: png.subarray(off + 4, off + 8).toString("ascii"),
+			data: png.subarray(off + 8, off + 8 + len),
+		});
 		off += 12 + len;
 	}
 	const idats = parts.filter((p) => p.type === "IDAT");
@@ -416,7 +508,10 @@ function crc32(buf: Buffer): number {
 	return ~c >>> 0;
 }
 
-async function renderSvg(svg: string, opts: RenderSvgOptions = {}): Promise<Buffer> {
+async function renderSvg(
+	svg: string,
+	opts: RenderSvgOptions = {},
+): Promise<Buffer> {
 	// NATIVE FIRST (Wave E stage 2, owner 2026-10-10): resvg rasterizes
 	// static SVG in-process — visual-maker SVGs never execute script, so a
 	// browser adds nothing but a process. White background mirrors the old
@@ -449,8 +544,14 @@ async function renderSvg(svg: string, opts: RenderSvgOptions = {}): Promise<Buff
 	return withBrowserPage(async (page) => {
 		const { width, height } = svgViewport(svg, opts);
 		await page.setViewport({ width, height });
-		await page.goto(pathToFileURL(file).href, { waitUntil: "load", timeout: 30_000 });
-		const shot = (await page.screenshot({ fullPage: true, type: "png" })) as Buffer;
+		await page.goto(pathToFileURL(file).href, {
+			waitUntil: "load",
+			timeout: 30_000,
+		});
+		const shot = (await page.screenshot({
+			fullPage: true,
+			type: "png",
+		})) as Buffer;
 		// Chrome's raw split-IDAT PNG is canonicalized before it reaches a
 		// provider (see providerSafePng) — the visual-maker feeds this exact
 		// buffer back to the vision model as its only way to "look".
@@ -474,7 +575,11 @@ export const MAX_PDF_CANVAS_SIDE = 8192;
 /** Plan the allocation from the scale-1 viewport (including PDF rotation).
  *  Keep ordinary DPI/ceil arithmetic unchanged; oversized pages lose scale,
  *  never gain it. Exported as a pure seam so extreme geometry needs no canvas. */
-export function pdfCanvasGeometry(baseWidth: number, baseHeight: number, dpi: number): {
+export function pdfCanvasGeometry(
+	baseWidth: number,
+	baseHeight: number,
+	dpi: number,
+): {
 	scale: number;
 	width: number;
 	height: number;
@@ -487,15 +592,22 @@ export function pdfCanvasGeometry(baseWidth: number, baseHeight: number, dpi: nu
 	}
 	// Limit sides first, so the area calculation cannot overflow even when
 	// the unscaled page dimensions or requested DPI are enormous.
-	let scale = Math.min(dpi / 72, MAX_PDF_CANVAS_SIDE / baseWidth, MAX_PDF_CANVAS_SIDE / baseHeight);
-	const area = (baseWidth * scale) * (baseHeight * scale);
-	if (area > MAX_PDF_CANVAS_PIXELS) scale *= Math.sqrt(MAX_PDF_CANVAS_PIXELS / area);
+	let scale = Math.min(
+		dpi / 72,
+		MAX_PDF_CANVAS_SIDE / baseWidth,
+		MAX_PDF_CANVAS_SIDE / baseHeight,
+	);
+	const area = baseWidth * scale * (baseHeight * scale);
+	if (area > MAX_PDF_CANVAS_PIXELS)
+		scale *= Math.sqrt(MAX_PDF_CANVAS_PIXELS / area);
 	const dimensions = (s: number) => ({
 		width: Math.max(1, Math.ceil(baseWidth * s)),
 		height: Math.max(1, Math.ceil(baseHeight * s)),
 	});
 	const fits = ({ width, height }: { width: number; height: number }) =>
-		width <= MAX_PDF_CANVAS_SIDE && height <= MAX_PDF_CANVAS_SIDE && width * height <= MAX_PDF_CANVAS_PIXELS;
+		width <= MAX_PDF_CANVAS_SIDE &&
+		height <= MAX_PDF_CANVAS_SIDE &&
+		width * height <= MAX_PDF_CANVAS_PIXELS;
 	// Ceil can put an otherwise bounded floating-point viewport over budget.
 	// Find a safe scale rather than clipping the viewport or allocating first.
 	if (!fits(dimensions(scale))) {
@@ -509,7 +621,9 @@ export function pdfCanvasGeometry(baseWidth: number, baseHeight: number, dpi: nu
 		scale = low;
 	}
 	if (scale <= 0 || baseWidth * scale === 0 || baseHeight * scale === 0) {
-		throw new Error("PDF page dimensions cannot be rendered at a positive scale");
+		throw new Error(
+			"PDF page dimensions cannot be rendered at a positive scale",
+		);
 	}
 	return { scale, ...dimensions(scale) };
 }
@@ -544,7 +658,11 @@ async function renderPdfPages(
 	// Standard-font data as a directory path (live-smoke finding 2026-09-19:
 	// without it pdfjs renders non-embedded standard fonts via fallback);
 	// verbosity 0 = errors only (JBIG2 noise on scanned PDFs).
-	const loadingTask = pdfjs.getDocument({ data, standardFontDataUrl: standardFontsDir(), verbosity: 0 });
+	const loadingTask = pdfjs.getDocument({
+		data,
+		standardFontDataUrl: standardFontsDir(),
+		verbosity: 0,
+	});
 	const doc = await loadingTask.promise;
 	try {
 		const out: RenderedPdfPage[] = [];
@@ -579,13 +697,69 @@ async function renderPdfPages(
 // ─── the real API ────────────────────────────────────────────────────────────
 
 export const realHeadless: HeadlessApi = {
+	async verifyPlot3D(request, options = {}) {
+		options.signal?.throwIfAborted();
+		const deadline = Date.now() + PLOT3D_DEADLINE_MS;
+		return withBrowserPage(async (page) => {
+			options.signal?.throwIfAborted();
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) throw new Error("3D runtime verification timed out");
+			const errors: string[] = [];
+			page.on("pageerror", (e) => errors.push(String(e)));
+			page.on("requestfailed", (r) =>
+				errors.push(`Request failed: ${r.url()}`),
+			);
+			const close = () => {
+				void page.close().catch(() => {});
+			};
+			const timer = setTimeout(close, remaining);
+			options.signal?.addEventListener("abort", close, { once: true });
+			try {
+				await page.setViewport({
+					width: 900,
+					height: 650,
+					deviceScaleFactor: 1,
+				});
+				await page.setContent(request.html, {
+					waitUntil: "load",
+					timeout: remaining,
+				});
+				const result = (await page.evaluate(
+					"window.__lhPlot3D.capture()",
+				)) as Plot3DVerification;
+				if (errors.length) throw new Error(errors.join("; "));
+				validatePlot3DVerification(result, request.expected);
+				return result;
+			} finally {
+				clearTimeout(timer);
+				options.signal?.removeEventListener("abort", close);
+				await page.evaluate("window.__lhPlot3D?.dispose()").catch(() => {});
+			}
+		}, true);
+	},
+	async rasterizeSvgPixels(svg, options) {
+		const { Resvg } = await import("@resvg/resvg-js");
+		const image = new Resvg(svg, { font: { loadSystemFonts: false } }).render();
+		if (image.width !== options.width || image.height !== options.height)
+			throw new Error("SVG pixel dimensions mismatch");
+		return {
+			width: image.width,
+			height: image.height,
+			rgba: new Uint8Array(image.pixels),
+		};
+	},
 	available() {
 		// The helper binary exists by construction in the packaged app; in dev
 		// it resolves via the electron package. System Chrome widens coverage.
-		return browserServiceBinary() !== null || resolveChromeExecutablePath() !== null;
+		return (
+			browserServiceBinary() !== null || resolveChromeExecutablePath() !== null
+		);
 	},
 	unavailableReason() {
-		return browserServiceBinary() === null && resolveChromeExecutablePath() === null ? NO_CHROME_MESSAGE : null;
+		return browserServiceBinary() === null &&
+			resolveChromeExecutablePath() === null
+			? NO_CHROME_MESSAGE
+			: null;
 	},
 	runDemo,
 	renderSvg,

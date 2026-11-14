@@ -1,3 +1,8 @@
+import {
+	isPlot3DResult,
+	validatePlot3DPng,
+	type Plot3DResult,
+} from "./plot3d.ts";
 /**
  * Sub-agent job contracts — the async ack-and-steer protocol
  *
@@ -12,8 +17,47 @@ import { newHandoffMessage } from "../native-messages.ts";
 
 // ─── Async sub-agent jobs (docs/archive/vision.md §2.5; docs/archive/plan.md Wave 0 protocol) ────────────
 
-export type JobKind = "research" | "demo" | "visual" | "pdf";
+export type JobKind = "research" | "demo" | "visual" | "pdf" | "plot";
 export type JobStatus = "running" | "done" | "error";
+
+export interface PlotCurve {
+	/** Stable annotation reference, unique within this panel. */
+	id?: string;
+	label: string;
+	expression?: string;
+	points?: { x: number; y: number }[];
+	/** Expression-only branch domain within the panel's effective x domain. */
+	xDomain?: [number, number];
+	/** Expression-only x coordinates to evaluate at important narrow features. */
+	sampleAt?: number[];
+}
+export type PlotAnnotation =
+	| { kind?: "point"; x: number; y: number; label: string }
+	| { kind: "note"; x: number; y: number; label: string }
+	| { kind: "curve-point"; curveId: string; x: number; label: string }
+	| {
+			kind: "level-crossing";
+			curveId: string;
+			level: string;
+			xBracket: [number, number];
+			label: string;
+	  };
+export interface PlotPanel {
+	title: string;
+	/** Overrides the plot-level default x range for this panel. */
+	xDomain?: [number, number];
+	yLabel: string;
+	yScale: "linear" | "log";
+	yDomain?: [number, number];
+	curves: PlotCurve[];
+	annotations?: PlotAnnotation[];
+}
+export interface PlotInput {
+	xLabel: string;
+	xScale: "linear" | "log";
+	xDomain: [number, number];
+	panels: PlotPanel[];
+}
 
 export interface JobRecord {
 	id: string;
@@ -77,7 +121,13 @@ export interface JobUsage {
  * object with these fields folds, including the real thing and test fakes). */
 export interface UsageStepLike {
 	inputTokens?: number | undefined;
-	inputTokenDetails?: { cacheReadTokens?: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number } | undefined;
+	inputTokenDetails?:
+		| {
+				cacheReadTokens?: number;
+				cacheWriteTokens?: number;
+				cacheWrite1hTokens?: number;
+		  }
+		| undefined;
 	outputTokens?: number | undefined;
 	outputTokenDetails?: { reasoningTokens?: number } | undefined;
 }
@@ -96,8 +146,15 @@ export function piUsageToStep(usage: {
 	return {
 		inputTokens: usage.input,
 		outputTokens: usage.output,
-		inputTokenDetails: { cacheReadTokens: usage.cacheRead, cacheWriteTokens: usage.cacheWrite, cacheWrite1hTokens: usage.cacheWrite1h ?? 0 },
-		outputTokenDetails: usage.reasoning !== undefined ? { reasoningTokens: usage.reasoning } : undefined,
+		inputTokenDetails: {
+			cacheReadTokens: usage.cacheRead,
+			cacheWriteTokens: usage.cacheWrite,
+			cacheWrite1hTokens: usage.cacheWrite1h ?? 0,
+		},
+		outputTokenDetails:
+			usage.reasoning !== undefined
+				? { reasoningTokens: usage.reasoning }
+				: undefined,
 	};
 }
 
@@ -110,7 +167,10 @@ export function accumulateJobUsage(
 	model: string,
 	step: UsageStepLike,
 ): JobUsage {
-	const add = (a: number | undefined, b: number | undefined): number | undefined =>
+	const add = (
+		a: number | undefined,
+		b: number | undefined,
+	): number | undefined =>
 		a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0);
 	const call: CallUsage = {
 		inputTokens: step.inputTokens,
@@ -124,14 +184,29 @@ export function accumulateJobUsage(
 		model,
 		inputTokens: add(total?.inputTokens, step.inputTokens),
 		outputTokens: add(total?.outputTokens, step.outputTokens),
-		cacheReadTokens: add(total?.cacheReadTokens, step.inputTokenDetails?.cacheReadTokens),
-		cacheWriteTokens: add(total?.cacheWriteTokens, step.inputTokenDetails?.cacheWriteTokens),
-		reasoningTokens: add(total?.reasoningTokens, step.outputTokenDetails?.reasoningTokens),
-		cacheWrite1hTokens: ((total?.cacheWriteTokens ?? 0) > 0 && total?.cacheWrite1hTokens === undefined) ||
-			((call.cacheWriteTokens ?? 0) > 0 && call.cacheWrite1hTokens === undefined)
-			? undefined : add(total?.cacheWrite1hTokens, call.cacheWrite1hTokens),
+		cacheReadTokens: add(
+			total?.cacheReadTokens,
+			step.inputTokenDetails?.cacheReadTokens,
+		),
+		cacheWriteTokens: add(
+			total?.cacheWriteTokens,
+			step.inputTokenDetails?.cacheWriteTokens,
+		),
+		reasoningTokens: add(
+			total?.reasoningTokens,
+			step.outputTokenDetails?.reasoningTokens,
+		),
+		cacheWrite1hTokens:
+			((total?.cacheWriteTokens ?? 0) > 0 &&
+				total?.cacheWrite1hTokens === undefined) ||
+			((call.cacheWriteTokens ?? 0) > 0 &&
+				call.cacheWrite1hTokens === undefined)
+				? undefined
+				: add(total?.cacheWrite1hTokens, call.cacheWrite1hTokens),
 		steps: (total?.steps ?? 0) + 1,
-		...(!total || total.calls ? { calls: [...(total?.calls ?? []), call] } : {}),
+		...(!total || total.calls
+			? { calls: [...(total?.calls ?? []), call] }
+			: {}),
 		lastStep: call,
 	};
 }
@@ -284,7 +359,7 @@ export interface SubagentResultMeta {
 /** The data-subagent-artifact part payload: what the UI renders. */
 export interface SubagentArtifactData {
 	kind: JobKind;
-	result: ResearchResult | DemoResult | VisualResult | PdfResult;
+	result: ResearchResult | DemoResult | VisualResult | Plot3DResult | PdfResult;
 	/** The learner's pinned UI state (invert switch) riding the record. */
 	ui?: { inverted?: boolean };
 }
@@ -292,7 +367,7 @@ export interface SubagentArtifactData {
 /** A result steer's marker details: the UI's meta + artifact in one
  *  payload (the projection splits it into metadata + data part). */
 export interface SteerDetails extends SubagentResultMeta {
-	result: ResearchResult | DemoResult | VisualResult | PdfResult;
+	result: ResearchResult | DemoResult | VisualResult | Plot3DResult | PdfResult;
 	/** LEARNER UI state pinned onto the artifact (owner, 2026-10-07): the
 	 *  invert switch's position, persisted so navigating away and back (or
 	 *  restarting) keeps it. A VIEW preference — never enters the teacher's
@@ -311,8 +386,10 @@ export function setSteerUiInverted(
 ): LhMessage[] {
 	return messages.map((m) => {
 		if (m.id !== messageId) return m;
-		const d = (m as LhMarkerMessage).details as Partial<SteerDetails> | undefined;
-		if (!d || (d.kind !== "demo" && d.kind !== "visual")) return m;
+		const d = (m as LhMarkerMessage).details as
+			Partial<SteerDetails> | undefined;
+		if (!d || (d.kind !== "demo" && d.kind !== "visual" && d.kind !== "plot"))
+			return m;
 		return { ...m, details: { ...d, ui: { ...d.ui, inverted } } } as LhMessage;
 	});
 }
@@ -323,7 +400,7 @@ export type SteerMessage = LhMarkerMessage;
 /** Whether a result is the failure shape (html/svg empty, failure brief). */
 export function isSubagentFailure(
 	kind: JobKind,
-	result: ResearchResult | DemoResult | VisualResult | PdfResult,
+	result: ResearchResult | DemoResult | VisualResult | Plot3DResult | PdfResult,
 ): boolean {
 	if (kind === "research") {
 		const r = result as ResearchResult;
@@ -337,12 +414,23 @@ export function isSubagentFailure(
 		const r = result as PdfResult;
 		return /^PDF failed:/i.test(r.brief);
 	}
+	if (kind === "plot" && isPlot3DResult(result)) {
+		try {
+			validatePlot3DPng(result.preview?.dataUrl);
+			return result.runtime?.checked !== true || !result.html;
+		} catch {
+			return true;
+		}
+	}
 	const r = result as VisualResult;
 	return typeof r.svg !== "string" || r.svg.length === 0;
 }
 
 /** The model-facing text of a steer: what the result IS, what to do with it. */
-function steerText(kind: JobKind, result: ResearchResult | DemoResult | VisualResult | PdfResult): string {
+function steerText(
+	kind: JobKind,
+	result: ResearchResult | DemoResult | VisualResult | Plot3DResult | PdfResult,
+): string {
 	if (isSubagentFailure(kind, result)) {
 		if (kind === "research")
 			return `${(result as ResearchResult).brief}\n\nContinue with what you can establish and flag the uncertainty to the learner.`;
@@ -352,7 +440,7 @@ function steerText(kind: JobKind, result: ResearchResult | DemoResult | VisualRe
 			}. Fall back to explaining in prose; if the brief was the problem, re-call demo with a tighter one.`;
 		if (kind === "pdf")
 			return `${(result as PdfResult).brief}\n\nContinue with what you can establish from the session and flag the gap to the learner.`;
-		return `The figure could not be made: ${(result as VisualResult).notes ?? "unknown reason"}. Fall back to prose or mermaid, or re-call visual with a tighter brief.`;
+		return `The figure could not be made: ${(result as VisualResult).notes ?? "unknown reason"}. Fall back to prose or try again with corrected input.`;
 	}
 	if (kind === "research")
 		return `Research complete — the researcher's full brief follows. Weave it into the lesson and cite its sources when you use its findings:\n\n${(result as ResearchResult).brief}`;
@@ -362,6 +450,8 @@ function steerText(kind: JobKind, result: ResearchResult | DemoResult | VisualRe
 		return `The demo "${(result as DemoResult).title}" is built, headlessly tested, and rendered in the lesson. Builder notes: ${
 			(result as DemoResult).notes ?? "(none)"
 		}.\nTeach with it — reference its controls by name and point the learner at what to try.`;
+	if (kind === "plot")
+		return "The plot was generated and is displayed in the lesson. Reference it as you teach; verify the underlying equations and data independently.";
 	if ((result as VisualResult).image)
 		return `The annotated image is drawn, verified by inspection, and rendered in the lesson. Maker notes: ${
 			(result as VisualResult).notes ?? "(none)"
@@ -378,7 +468,7 @@ function steerText(kind: JobKind, result: ResearchResult | DemoResult | VisualRe
  */
 export function buildSubagentSteer(
 	job: Pick<JobRecord, "id" | "kind" | "toolCallId">,
-	result: ResearchResult | DemoResult | VisualResult | PdfResult,
+	result: ResearchResult | DemoResult | VisualResult | Plot3DResult | PdfResult,
 ): SteerMessage {
 	return {
 		id: `steer_${job.id}`,
@@ -402,7 +492,12 @@ export function buildSubagentSteer(
 export function buildAbortSteer(
 	job: Pick<JobRecord, "id" | "kind" | "toolCallId">,
 ): SteerMessage {
-	const meta = { jobId: job.id, kind: job.kind, toolCallId: job.toolCallId, aborted: true } as const;
+	const meta = {
+		jobId: job.id,
+		kind: job.kind,
+		toolCallId: job.toolCallId,
+		aborted: true,
+	} as const;
 	return {
 		id: `steer_${job.id}`,
 		role: "custom",
@@ -443,7 +538,9 @@ export function buildProbeHandoffSteer(chatId: string): SteerMessage {
 /** True when the transcript already carries this steer — idempotent
  *  delivery for ANY steer kind: every steer id is deterministic per its
  *  event (steer_<jobId> for jobs, steer_probe_<chatId> for the handoff). */
-export function steerDelivered(messages: LhMessage[], steerId: string): boolean {
+export function steerDelivered(
+	messages: LhMessage[],
+	steerId: string,
+): boolean {
 	return messages.some((m) => m.id === steerId);
 }
-

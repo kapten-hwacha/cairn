@@ -226,6 +226,8 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 	let currentSvg: string | null = null;
 	/** The svg shown in the most recent render (null = never rendered). */
 	let renderedSvg: string | null = null;
+	let inspectedSvg: string | null = null;
+	let lastRenderError: string | undefined;
 	let finalText = "";
 	let captureError: unknown;
 
@@ -244,6 +246,9 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 				opts.chatId ? providerEventObserver(opts.chatId, "job:visualMaker") : undefined,
 				capture,
 			);
+			// A render only becomes eligible for delivery after a later model call
+			// has received the image, not merely when it was queued in messages.
+			if (renderedSvg) inspectedSvg = renderedSvg;
 			// Money channel: each iteration is one model call.
 			opts.onUsage?.(result.usage);
 			messages = [...messages, result];
@@ -271,6 +276,7 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 					if (!image.ok) return { svg: "", notes: `FAILED: inspecting the final SVG failed — ${image.message}` };
 					opts.onActivity?.("render_svg: inspecting final render");
 					renderedSvg = currentSvg;
+					lastRenderError = undefined;
 					messages = [
 						...messages,
 						{
@@ -352,10 +358,12 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 						if (!image.ok) throw new Error(image.message);
 						renderImage = image;
 						renderedSvg = currentSvg;
+						lastRenderError = undefined;
 						opts.onActivity?.("render_svg: inspecting render");
 						toolResults.push(toolText(call.id, call.name, "Rendered — the PNG follows in the next message. Look at it."));
 					} catch (err) {
 						const msg = err instanceof Error ? err.message : String(err);
+						lastRenderError = msg;
 						opts.onActivity?.("render_svg: render error");
 						toolResults.push(toolText(call.id, call.name, `RENDER ERROR (the SVG may be malformed): ${msg}. Fix it with write_svg and render again.`));
 					}
@@ -389,10 +397,10 @@ export async function runVisualMaker(input: VisualMakerInput, opts: VisualMakerO
 	}
 
 	// Iteration limit: deliver the last written SVG only if it was looked at.
-	if (currentSvg && renderedSvg === currentSvg) {
+	if (currentSvg && inspectedSvg === currentSvg && renderedSvg === currentSvg) {
 		return finish(currentSvg, finalText || "Iteration limit reached — delivering the last verified SVG.", learnerImage);
 	}
-	return { svg: "", notes: `FAILED: iteration limit (${maxIterations}) reached without a verified SVG.` };
+	return { svg: "", notes: `FAILED: iteration limit (${maxIterations}) reached without a verified SVG.${lastRenderError ? ` Last render error: ${lastRenderError}` : ""}` };
 }
 
 function toolText(toolCallId: string, toolName: string, value: string): ToolResultMessage {

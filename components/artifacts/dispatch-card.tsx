@@ -23,6 +23,7 @@ const KIND_LABEL: Record<JobKind, string> = {
 	research: "Research agent",
 	demo: "Demo agent",
 	visual: "Figure agent",
+	plot: "Plot",
 	pdf: "PDF reader",
 };
 
