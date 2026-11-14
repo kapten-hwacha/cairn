@@ -63,6 +63,10 @@ export default defineConfig(({ mode }) => ({
 				find: /^node:buffer$/,
 				replacement: path.resolve(__dirname, "src/worker/shims/buffer.ts"),
 			},
+			{
+				find: /^buffer$/,
+				replacement: path.resolve(__dirname, "src/worker/shims/buffer.ts"),
+			},
 			{ find: "@", replacement: path.resolve(__dirname, "./") },
 			{
 				find: "next/navigation",

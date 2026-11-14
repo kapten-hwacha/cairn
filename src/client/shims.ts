@@ -1,3 +1,5 @@
+import { ShimBuffer } from "../worker/shims/crypto.ts";
+
 function createProcessPolyfill() {
 	const listeners = new Map<string, Array<(...args: any[]) => void>>();
 	const proc = {
@@ -84,6 +86,9 @@ function createProcessPolyfill() {
 if (typeof globalThis !== "undefined") {
 	if (typeof (globalThis as any).global === "undefined") {
 		(globalThis as any).global = globalThis;
+	}
+	if (typeof (globalThis as any).Buffer === "undefined") {
+		(globalThis as any).Buffer = ShimBuffer;
 	}
 	const polyfill = createProcessPolyfill();
 	if (typeof (globalThis as any).process === "undefined") {

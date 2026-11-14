@@ -27,9 +27,70 @@ function svgViewport(
 	};
 }
 
+export type RenderSvgHostBridge = (
+	svg: string,
+	width: number,
+	height: number,
+) => Promise<Uint8Array>;
+
+function renderSvgViaWorkerHost(
+	svg: string,
+	width: number,
+	height: number,
+): Promise<Uint8Array> {
+	const requestId = `svg-${Math.random().toString(36).slice(2)}`;
+	return new Promise<Uint8Array>((resolve, reject) => {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const cleanup = () => {
+			if (timer) clearTimeout(timer);
+			if (typeof self !== "undefined" && self.removeEventListener) {
+				self.removeEventListener("message", handler);
+			}
+		};
+		const handler = (event: MessageEvent) => {
+			if (
+				event.data?.type === "lh:render-svg-done" &&
+				event.data?.requestId === requestId
+			) {
+				cleanup();
+				if (event.data.error) {
+					reject(new Error(String(event.data.error)));
+				} else if (event.data.png instanceof Uint8Array) {
+					resolve(event.data.png);
+				} else if (event.data.png instanceof ArrayBuffer) {
+					resolve(new Uint8Array(event.data.png));
+				} else {
+					reject(new Error("Host SVG render returned no PNG bytes"));
+				}
+			}
+		};
+
+		timer = setTimeout(() => {
+			cleanup();
+			reject(new Error("Host SVG render timed out after 15s"));
+		}, 15000);
+		if (
+			typeof timer === "object" &&
+			typeof (timer as { unref?: () => void }).unref === "function"
+		) {
+			(timer as { unref: () => void }).unref();
+		}
+
+		self.addEventListener("message", handler);
+		self.postMessage({
+			type: "lh:render-svg",
+			requestId,
+			svg,
+			width,
+			height,
+		});
+	});
+}
+
 async function renderSvg(
 	svg: string,
 	opts: RenderSvgOptions = {},
+	renderSvgViaHost?: RenderSvgHostBridge,
 ): Promise<Buffer> {
 	const { width, height } = svgViewport(svg, opts);
 	try {
@@ -42,6 +103,26 @@ async function renderSvg(
 		const pngBytes = rendered.asPng();
 		return providerSafePng(Buffer.from(pngBytes));
 	} catch (resvgErr) {
+		const hostBridge =
+			renderSvgViaHost ??
+			(typeof window === "undefined" &&
+			typeof self !== "undefined" &&
+			typeof self.postMessage === "function" &&
+			typeof self.addEventListener === "function"
+				? renderSvgViaWorkerHost
+				: undefined);
+
+		const fallbackErrors: string[] = [];
+
+		if (hostBridge) {
+			try {
+				const pngBytes = await hostBridge(svg, width, height);
+				return providerSafePng(Buffer.from(pngBytes));
+			} catch (hostErr) {
+				fallbackErrors.push(`host (${String(hostErr)})`);
+			}
+		}
+
 		if (
 			typeof OffscreenCanvas !== "undefined" &&
 			typeof createImageBitmap !== "undefined" &&
@@ -60,11 +141,16 @@ async function renderSvg(
 					const arr = new Uint8Array(await blobOut.arrayBuffer());
 					return providerSafePng(Buffer.from(arr));
 				}
+				fallbackErrors.push("OffscreenCanvas (no 2d context)");
 			} catch (canvasErr) {
-				throw new Error(
-					`Failed to render SVG with Resvg (${String(resvgErr)}) and OffscreenCanvas (${String(canvasErr)})`,
-				);
+				fallbackErrors.push(`OffscreenCanvas (${String(canvasErr)})`);
 			}
+		}
+
+		if (fallbackErrors.length > 0) {
+			throw new Error(
+				`Failed to render SVG with Resvg (${String(resvgErr)}) and ${fallbackErrors.join(", ")}`,
+			);
 		}
 		throw resvgErr;
 	}
@@ -260,6 +346,7 @@ export function createWorkerHeadless(opts?: {
 		html: string,
 		opts?: RunDemoOptions,
 	) => Promise<DemoRunResult>;
+	renderSvgViaHost?: RenderSvgHostBridge;
 	createCanvas2D?: (
 		width: number,
 		height: number,
@@ -367,7 +454,7 @@ export function createWorkerHeadless(opts?: {
 			});
 		},
 		renderSvg(svg: string, renderOpts?: RenderSvgOptions): Promise<Buffer> {
-			return renderSvg(svg, renderOpts);
+			return renderSvg(svg, renderOpts, opts?.renderSvgViaHost);
 		},
 		renderPdfPages(
 			pdfPath: string,

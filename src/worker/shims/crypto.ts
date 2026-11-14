@@ -73,6 +73,14 @@ export class ShimBuffer extends Uint8Array {
 		return buf;
 	}
 
+	static allocUnsafe(size: number): ShimBuffer {
+		return new ShimBuffer(size);
+	}
+
+	static isBuffer(obj: unknown): obj is ShimBuffer {
+		return obj instanceof ShimBuffer;
+	}
+
 	static concat(list: Uint8Array[], totalLength?: number): ShimBuffer {
 		const len = totalLength ?? list.reduce((acc, curr) => acc + curr.byteLength, 0);
 		const out = new ShimBuffer(len);

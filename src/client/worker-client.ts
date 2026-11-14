@@ -503,6 +503,66 @@ function fromBase64(base64: string): Uint8Array {
 				window.addEventListener("message", onDone);
 				iframe.srcdoc = buildDemoVerifySrcDoc(html, requestId, settleMs, probe);
 				document.body.appendChild(iframe);
+			} else if (event.data?.type === "lh:render-svg") {
+				const { requestId, svg, width, height } = event.data as {
+					requestId: string;
+					svg: string;
+					width: number;
+					height: number;
+				};
+				const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+				const url = URL.createObjectURL(blob);
+				const img = new Image();
+				let settled = false;
+				const finish = (payload: Record<string, unknown>, transfer: Transferable[] = []) => {
+					if (settled) return;
+					settled = true;
+					clearTimeout(timer);
+					URL.revokeObjectURL(url);
+					worker.postMessage({ type: "lh:render-svg-done", requestId, ...payload }, transfer);
+				};
+				const timer = setTimeout(() => {
+					finish({ error: "Main-thread SVG rasterization timed out" });
+				}, 15_000);
+				img.onload = () => {
+					try {
+						const canvas = document.createElement("canvas");
+						canvas.width = Math.max(1, Math.round(Number(width) || img.naturalWidth || 900));
+						canvas.height = Math.max(1, Math.round(Number(height) || img.naturalHeight || 700));
+						const ctx = canvas.getContext("2d");
+						if (!ctx) {
+							finish({ error: "Main-thread 2D canvas context unavailable" });
+							return;
+						}
+						ctx.fillStyle = "#ffffff";
+						ctx.fillRect(0, 0, canvas.width, canvas.height);
+						ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+						canvas.toBlob(
+							(pngBlob) => {
+								if (!pngBlob) {
+									finish({ error: "canvas.toBlob returned null" });
+									return;
+								}
+								pngBlob.arrayBuffer().then(
+									(buf) => {
+										const bytes = new Uint8Array(buf);
+										finish({ png: bytes }, [bytes.buffer]);
+									},
+									(err) => {
+										finish({ error: err instanceof Error ? err.message : String(err) });
+									},
+								);
+							},
+							"image/png",
+						);
+					} catch (err) {
+						finish({ error: err instanceof Error ? err.message : String(err) });
+					}
+				};
+				img.onerror = () => {
+					finish({ error: "Failed to decode SVG in main-thread Image" });
+				};
+				img.src = url;
 			}
 		});
 
