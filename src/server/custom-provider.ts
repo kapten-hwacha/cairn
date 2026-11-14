@@ -10,6 +10,7 @@ import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completio
 import { configureProviderSource, piModels } from "../agent/models.ts";
 import { readSettings } from "../store/settings.ts";
 import { CustomBodyLimitError, readBoundedJson } from "./custom-provider-body.ts";
+import { isBlockedMetadataOrLinkLocalHost } from "./metadata-guard.ts";
 import { CUSTOM_PROVIDER } from "../core/auth-keys.ts";
 import { customBindingMatches } from "../core/custom-provider-auth.ts";
 import { customAuthState, customKeyAuthorized } from "./custom-provider-auth.ts";
@@ -137,6 +138,9 @@ export type DiscoverResult =
 export async function discoverModels(baseUrl: string, apiKey?: string): Promise<DiscoverResult> {
 	const base = normalizeBaseUrl(baseUrl);
 	if (!base) return { ok: false, error: "Base URL must be a valid http(s) URL" };
+	if (isBlockedMetadataOrLinkLocalHost(new URL(base).hostname)) {
+		return { ok: false, error: "Base URL cannot target cloud metadata or link-local addresses", fatal: true };
+	}
 	const key = apiKey?.trim();
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), 15_000);

@@ -21,6 +21,7 @@ import {
 	buildQuadernoDocTitle,
 	cleanTranscribedMarkdown,
 } from "../core/quaderno.ts";
+import { isBlockedMetadataOrLinkLocalHost } from "./metadata-guard.ts";
 
 /**
  * Resolves Quaderno configuration by reading ~/.config/quaderno/.env (if present)
@@ -65,11 +66,9 @@ export async function resolveQuadernoConfig(opts?: {
 	try {
 		const parsedUrl = new URL(baseUrl);
 		const proto = parsedUrl.protocol.toLowerCase();
-		const h = parsedUrl.hostname.toLowerCase();
 		if (
 			(proto !== "http:" && proto !== "https:") ||
-			h === "169.254.169.254" ||
-			h === "metadata.google.internal"
+			isBlockedMetadataOrLinkLocalHost(parsedUrl.hostname)
 		) {
 			baseUrl = DEFAULT_QUADERNO_BASE_URL;
 		}
@@ -103,6 +102,69 @@ export async function resolveQuadernoConfig(opts?: {
 	};
 }
 
+function isBrowserWorkerFsError(err: unknown): boolean {
+	return err instanceof Error && err.message.includes("not supported in browser/worker runtime");
+}
+
+function realpathWithFallback(target: string): string {
+	try {
+		if (typeof fs.realpathSync.native === "function") {
+			return fs.realpathSync.native(/* turbopackIgnore: true */ target);
+		}
+	} catch (err) {
+		const code = (err as NodeJS.ErrnoException | undefined)?.code;
+		if (code === "ENOENT" || code === "ENOTDIR" || code === "ELOOP") throw err;
+		// Fall back to fs.realpathSync when .native is unsupported in runtime or mocked
+	}
+	return fs.realpathSync(/* turbopackIgnore: true */ target);
+}
+
+function isSameOrWithinRealRoot(target: string, realRoot: string): boolean {
+	const prefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+	return target === realRoot || target.startsWith(prefix);
+}
+
+function resolveDeepestAncestorRealPath(target: string): string | null {
+	let current = path.resolve(target);
+	const missingSegments: string[] = [];
+	for (;;) {
+		try {
+			fs.lstatSync(/* turbopackIgnore: true */ current);
+		} catch (err) {
+			if (isBrowserWorkerFsError(err)) {
+				return missingSegments.length > 0
+					? path.join(current, ...missingSegments.reverse())
+					: current;
+			}
+			const code = (err as NodeJS.ErrnoException | undefined)?.code;
+			if (code !== "ENOENT") return null;
+			const parent = path.dirname(current);
+			if (parent === current) return null;
+			missingSegments.push(path.basename(current));
+			current = parent;
+			continue;
+		}
+		// Existing entry (including symlinks). Dangling symlinks throw ENOENT here and are rejected.
+		try {
+			const real = realpathWithFallback(current);
+			return missingSegments.length > 0 ? path.join(real, ...missingSegments.reverse()) : real;
+		} catch (err) {
+			if (isBrowserWorkerFsError(err)) {
+				return missingSegments.length > 0
+					? path.join(current, ...missingSegments.reverse())
+					: current;
+			}
+			return null;
+		}
+	}
+}
+
+function isSafeRelativeFolder(folder: string): boolean {
+	if (!folder || folder.includes("\0")) return false;
+	if (path.isAbsolute(folder) || path.win32.isAbsolute(folder)) return false;
+	return !folder.split(/[/\\]+/).some((seg) => seg === "..");
+}
+
 /**
  * Verifies that candidatePath resolves to a safe .pdf file strictly within syncDir,
  * preventing both lexical path traversal and symlink escape outside the sync root.
@@ -114,51 +176,78 @@ export function isSafePdfUnderSyncRoot(candidatePath: string, syncDir: string): 
 	if (!resolved.toLowerCase().endsWith(".pdf")) {
 		return false;
 	}
-	if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+	const rootPrefix = root.endsWith(path.sep) ? root : root + path.sep;
+	if (resolved === root || !resolved.startsWith(rootPrefix)) {
 		return false;
 	}
 
-	if (fs.existsSync(root)) {
-		let realRoot: string;
+	let rootExists = false;
+	try {
+		fs.lstatSync(/* turbopackIgnore: true */ root);
+		rootExists = true;
+	} catch (err) {
+		if (isBrowserWorkerFsError(err)) {
+			return true;
+		}
+		const code = (err as NodeJS.ErrnoException | undefined)?.code;
+		if (code !== "ENOENT") return false;
+	}
+
+	if (!rootExists) {
+		const realRoot = resolveDeepestAncestorRealPath(root);
+		const realCandidate = resolveDeepestAncestorRealPath(resolved);
+		if (!realRoot || !realCandidate) return false;
+		return (
+			realCandidate.toLowerCase().endsWith(".pdf") &&
+			realCandidate !== realRoot &&
+			isSameOrWithinRealRoot(realCandidate, realRoot)
+		);
+	}
+
+	let realRoot: string;
+	try {
+		realRoot = realpathWithFallback(root);
+	} catch (err) {
+		if (isBrowserWorkerFsError(err)) return true;
+		return false;
+	}
+
+	const rel = path.relative(root, resolved);
+	const segments = rel.split(path.sep).filter(Boolean);
+	let current = root;
+	for (let i = 0; i < segments.length; i++) {
+		current = path.join(current, segments[i]!);
 		try {
-			realRoot = fs.realpathSync.native(root);
-		} catch {
+			fs.lstatSync(/* turbopackIgnore: true */ current);
+		} catch (err) {
+			if (isBrowserWorkerFsError(err)) return true;
+			const code = (err as NodeJS.ErrnoException | undefined)?.code;
+			if (code === "ENOENT") {
+				const resolvedAncestor = resolveDeepestAncestorRealPath(resolved);
+				return (
+					resolvedAncestor !== null &&
+					resolvedAncestor.toLowerCase().endsWith(".pdf") &&
+					resolvedAncestor !== realRoot &&
+					isSameOrWithinRealRoot(resolvedAncestor, realRoot)
+				);
+			}
 			return false;
 		}
 
-		let exists = false;
+		let realCurrent: string;
 		try {
-			fs.lstatSync(resolved);
-			exists = true;
-		} catch {
-			exists = false;
+			realCurrent = realpathWithFallback(current);
+		} catch (err) {
+			if (isBrowserWorkerFsError(err)) return true;
+			return false;
 		}
 
-		if (exists) {
-			let realCandidate: string;
-			try {
-				realCandidate = fs.realpathSync.native(resolved);
-			} catch {
+		if (!isSameOrWithinRealRoot(realCurrent, realRoot)) {
+			return false;
+		}
+		if (i === segments.length - 1) {
+			if (!realCurrent.toLowerCase().endsWith(".pdf") || realCurrent === realRoot) {
 				return false;
-			}
-			if (
-				!realCandidate.toLowerCase().endsWith(".pdf") ||
-				!realCandidate.startsWith(realRoot + path.sep)
-			) {
-				return false;
-			}
-		} else {
-			const parent = path.dirname(resolved);
-			if (fs.existsSync(parent)) {
-				let realParent: string;
-				try {
-					realParent = fs.realpathSync.native(parent);
-				} catch {
-					return false;
-				}
-				if (realParent !== realRoot && !realParent.startsWith(realRoot + path.sep)) {
-					return false;
-				}
 			}
 		}
 	}
@@ -432,6 +521,7 @@ export async function getQuadernoStatus(deps?: {
 		const res = await fetchImpl(`${config.baseUrl}/api/device/status`, {
 			headers,
 			signal: AbortSignal.timeout(2000),
+			redirect: "error",
 		});
 
 		if (!res.ok) {
@@ -500,10 +590,30 @@ export async function executeQuadernoAction(
 			const pdfBytes = buildMinimalPdfBytes(req.title, req.markdown);
 			localPdfPath = await writeQuadernoPdf(`${docTitle}.pdf`, Buffer.from(pdfBytes).toString("base64"));
 		} else {
+			if (!isSafeRelativeFolder(config.folder)) {
+				return {
+					ok: false,
+					mode: "filesystem",
+					message: "Refusing to write PDF outside sync directory",
+				};
+			}
 			const folderDir = path.join(config.syncDir, config.folder);
-			await fs.promises.mkdir(folderDir, { recursive: true });
-
 			localPdfPath = path.join(folderDir, `${docTitle}.pdf`);
+			if (!isSafePdfUnderSyncRoot(localPdfPath, config.syncDir)) {
+				return {
+					ok: false,
+					mode: "filesystem",
+					message: "Refusing to write PDF outside sync directory",
+				};
+			}
+			await fs.promises.mkdir(folderDir, { recursive: true });
+			if (!isSafePdfUnderSyncRoot(localPdfPath, config.syncDir)) {
+				return {
+					ok: false,
+					mode: "filesystem",
+					message: "Refusing to write PDF outside sync directory",
+				};
+			}
 			const pdfBytes = buildMinimalPdfBytes(req.title, req.markdown);
 			await fs.promises.writeFile(localPdfPath, pdfBytes);
 		}
@@ -524,6 +634,7 @@ export async function executeQuadernoAction(
 				method: "POST",
 				headers,
 				body: form,
+				redirect: "error",
 			});
 			daemonOk = res.ok;
 		} catch {
@@ -560,6 +671,7 @@ export async function executeQuadernoAction(
 			const syncRes = await fetchImpl(`${config.baseUrl}/api/sync`, {
 				method: "POST",
 				headers,
+				redirect: "error",
 			});
 			syncSucceeded = syncRes.ok;
 		} catch {
@@ -675,6 +787,7 @@ export async function executeQuadernoAction(
 					headers,
 					body: form,
 					signal: AbortSignal.timeout(45000),
+					redirect: "error",
 				});
 
 				if (transcribeRes.ok) {

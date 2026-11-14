@@ -751,6 +751,151 @@ describe("Quaderno Server Implementation", () => {
 			env: { QUADERNO_BASE_URL: "ftp://127.0.0.1:5000" } as unknown as NodeJS.ProcessEnv,
 		});
 		assert.equal(configFtp.baseUrl, "http://127.0.0.1:5000");
+
+		// Extended SEC-11 metadata & link-local blocks
+		for (const blockedUrl of [
+			"http://0.0.0.0:5000",
+			"http://169.254.0.1:5000",
+			"http://metadata:5000",
+			"http://100.100.100.200:5000",
+			"http://[fe80::1]:5000",
+			"http://[fd00:ec2::254]:5000",
+			"http://[::ffff:169.254.169.254]:5000",
+			"http://[::169.254.169.254]:5000",
+			"http://[64:ff9b::169.254.169.254]:5000",
+		]) {
+			const cfg = await resolveQuadernoConfig({
+				homeDir: home,
+				env: { QUADERNO_BASE_URL: blockedUrl } as unknown as NodeJS.ProcessEnv,
+			});
+			assert.equal(cfg.baseUrl, "http://127.0.0.1:5000", `expected ${blockedUrl} to be blocked`);
+		}
+
+		// Localhost & LAN RFC1918 remain allowed
+		for (const allowedUrl of [
+			"http://127.0.0.1:5001",
+			"http://localhost:5001",
+			"http://[::1]:5001",
+			"http://192.168.1.42:5000",
+			"http://10.0.0.12:5000",
+		]) {
+			const cfg = await resolveQuadernoConfig({
+				homeDir: home,
+				env: { QUADERNO_BASE_URL: allowedUrl } as unknown as NodeJS.ProcessEnv,
+			});
+			assert.equal(cfg.baseUrl, allowedUrl, `expected ${allowedUrl} to remain allowed`);
+		}
+	});
+
+	it("SEC-09: isSafePdfUnderSyncRoot walks missing ancestors and rejects symlink escapes; sendProblem validates folder", async () => {
+		const syncDir = await fs.mkdtemp(path.join(os.tmpdir(), "lh-quaderno-sec09-sync-"));
+		const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "lh-quaderno-sec09-outside-"));
+		try {
+			const symlinkSubdir = path.join(syncDir, "linked-sub");
+			await fs.symlink(outsideDir, symlinkSubdir);
+
+			// Missing nested descendant under symlinked directory must be rejected
+			const nestedThroughSymlink = path.join(symlinkSubdir, "nonexistent", "nested", "evil.pdf");
+			assert.equal(isSafePdfUnderSyncRoot(nestedThroughSymlink, syncDir), false);
+
+			// Dangling symlink inside syncDir must be rejected
+			const danglingLink = path.join(syncDir, "dangling.pdf");
+			await fs.symlink(path.join(outsideDir, "does-not-exist.pdf"), danglingLink);
+			assert.equal(isSafePdfUnderSyncRoot(danglingLink, syncDir), false);
+
+			// Genuine nonexistent nested path inside syncDir is allowed
+			const safeNested = path.join(syncDir, "fresh-folder", "deep", "ok.pdf");
+			assert.equal(isSafePdfUnderSyncRoot(safeNested, syncDir), true);
+
+			// sendProblem rejects .. segments in config.folder
+			const traversalFolderRes = await executeQuadernoAction(
+				{ action: "sendProblem", title: "Test", markdown: "Hello", docTitle: "test-doc" },
+				{
+					config: {
+						baseUrl: "http://127.0.0.1:5000",
+						apiKey: null,
+						syncDir,
+						folder: "../outside",
+					},
+					fetchImpl: async () => new Response(null, { status: 500 }),
+				},
+			);
+			assert.equal(traversalFolderRes.ok, false);
+			assert.equal(traversalFolderRes.message, "Refusing to write PDF outside sync directory");
+
+			// sendProblem rejects absolute config.folder
+			const absFolderRes = await executeQuadernoAction(
+				{ action: "sendProblem", title: "Test", markdown: "Hello", docTitle: "test-doc" },
+				{
+					config: {
+						baseUrl: "http://127.0.0.1:5000",
+						apiKey: null,
+						syncDir,
+						folder: outsideDir,
+					},
+					fetchImpl: async () => new Response(null, { status: 500 }),
+				},
+			);
+			assert.equal(absFolderRes.ok, false);
+			assert.equal(absFolderRes.message, "Refusing to write PDF outside sync directory");
+
+			// sendProblem rejects symlinked folder pointing outside syncDir before mkdir/writeFile
+			const symlinkFolderRes = await executeQuadernoAction(
+				{ action: "sendProblem", title: "Test", markdown: "Hello", docTitle: "test-doc" },
+				{
+					config: {
+						baseUrl: "http://127.0.0.1:5000",
+						apiKey: null,
+						syncDir,
+						folder: "linked-sub/new-child",
+					},
+					fetchImpl: async () => new Response(null, { status: 500 }),
+				},
+			);
+			assert.equal(symlinkFolderRes.ok, false);
+			assert.equal(symlinkFolderRes.message, "Refusing to write PDF outside sync directory");
+			assert.deepEqual(await fs.readdir(outsideDir), []);
+		} finally {
+			await fs.rm(syncDir, { recursive: true, force: true });
+			await fs.rm(outsideDir, { recursive: true, force: true });
+		}
+	});
+
+	it("SEC-11: getQuadernoStatus and executeQuadernoAction pass redirect: 'error' to fetchImpl", async () => {
+		const syncDir = await fs.mkdtemp(path.join(os.tmpdir(), "lh-quaderno-redirect-"));
+		try {
+			const redirects: Array<RequestRedirect | undefined> = [];
+			const stubFetch: typeof fetch = async (_url, init) => {
+				redirects.push(init?.redirect);
+				return new Response(JSON.stringify({ ok: true, connected: false }), { status: 200 });
+			};
+			const config = { baseUrl: "http://127.0.0.1:5000", apiKey: null, syncDir, folder: "learn-harness" };
+
+			await getQuadernoStatus({ config, fetchImpl: stubFetch });
+			await executeQuadernoAction(
+				{ action: "sendProblem", title: "T", markdown: "M", docTitle: "doc1" },
+				{ config, fetchImpl: stubFetch },
+			);
+			await executeQuadernoAction(
+				{ action: "pullPdf", docTitle: "doc1" },
+				{ config, fetchImpl: stubFetch },
+			);
+
+			assert.equal(redirects.length, 4);
+			assert.ok(redirects.every((r) => r === "error"), `expected all fetch calls to pass redirect: 'error', got ${JSON.stringify(redirects)}`);
+		} finally {
+			await fs.rm(syncDir, { recursive: true, force: true });
+		}
+	});
+
+	it("SEC-14: normalizeTranscribedChemistry skips heavy regexes on lines longer than 4096 chars without hanging", () => {
+		const pathological = `${"1".repeat(20_000)}\nMix H₂O and $\\text{H}_2\\text{O}$.`;
+		const start = Date.now();
+		const out = normalizeTranscribedChemistry(pathological);
+		const elapsedMs = Date.now() - start;
+		assert.ok(elapsedMs < 500, `expected fast execution, took ${elapsedMs}ms`);
+		assert.ok(out.startsWith("1".repeat(20_000)));
+		assert.ok(out.includes("$\\ce{H2O}$"));
 	});
 });
 

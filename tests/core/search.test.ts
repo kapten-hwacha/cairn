@@ -146,6 +146,25 @@ describe("tavilyProvider (wire shape per docs.tavily.com, verified 2026-09-20)",
 		);
 		await assert.rejects(provider.search("q", 5), /Tavily search API 401: Unauthorized/);
 	});
+
+	it("omits raw unparsed HTML/body and redacts echoed tokens in error messages", async () => {
+		const key = "tvly-secret-test-token";
+		const htmlProvider = tavilyProvider(key, async () =>
+			new Response(`<html><body>Bearer ${key} leaked</body></html>`, { status: 502 }),
+		);
+		await assert.rejects(
+			htmlProvider.search("q", 5),
+			(err: Error) => err.message === "Tavily search API 502" && !err.message.includes(key) && !err.message.includes("<html>"),
+		);
+
+		const tokenInDetail = tavilyProvider(key, async () =>
+			new Response(JSON.stringify({ detail: { error: `Bad auth\nBearer ${key} and ${key}` } }), { status: 401 }),
+		);
+		await assert.rejects(
+			tokenInDetail.search("q", 5),
+			(err: Error) => /Tavily search API 401: Bad auth/.test(err.message) && !err.message.includes(key) && !err.message.includes("\n"),
+		);
+	});
 });
 
 describe("braveProvider (wire shape per Brave's dashboard docs, verified 2026-09-20)", () => {
@@ -171,11 +190,15 @@ describe("braveProvider (wire shape per Brave's dashboard docs, verified 2026-09
 		assert.deepEqual(hits, [{ title: "Example", url: "https://example.com/b", snippet: "a description" }]);
 	});
 
-	it("surfaces the HTTP status on failure", async () => {
-		const provider = braveProvider("brave-throwaway-key-00001", async () =>
-			new Response("rate limited", { status: 429 }),
+	it("surfaces the HTTP status on failure without exposing raw error bodies", async () => {
+		const key = "brave-throwaway-key-00001";
+		const provider = braveProvider(key, async () =>
+			new Response(`<html>rate limited ${key}</html>`, { status: 429 }),
 		);
-		await assert.rejects(provider.search("q", 5), /Brave search API 429/);
+		await assert.rejects(
+			provider.search("q", 5),
+			(err: Error) => err.message === "Brave search API 429" && !err.message.includes(key) && !err.message.includes("<html>"),
+		);
 	});
 });
 

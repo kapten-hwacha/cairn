@@ -1,4 +1,19 @@
-import { compactionInFlight, deleteChatSession, getChat, isTurnRunning, sessionCoverage, sessionCost, stores, turnFailure, type ChatDeleteMode } from "@/src/server";
+import {
+	CustomBodyLimitError,
+	compactionInFlight,
+	deleteChatSession,
+	getChat,
+	isTurnRunning,
+	readBoundedJson,
+	sessionCoverage,
+	sessionCost,
+	stores,
+	turnFailure,
+	type ChatDeleteMode,
+} from "@/src/server";
+
+const MAX_CHAT_RENAME_BODY_BYTES = 64 * 1024;
+const MAX_CHAT_TITLE_CHARS = 500;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -38,11 +53,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 	if (!(await getChat(id))) return Response.json({ error: "Not found" }, { status: 404 });
-	const body = (await req.json().catch(() => null)) as { title?: unknown } | null;
-	if (typeof body?.title !== "string" || body.title.trim() === "") {
+	let rawBody: unknown;
+	try {
+		rawBody = await readBoundedJson(req, MAX_CHAT_RENAME_BODY_BYTES);
+	} catch (error) {
+		if (error instanceof CustomBodyLimitError) {
+			return Response.json({ error: "Request body exceeds 64 KiB limit" }, { status: 413 });
+		}
+		return Response.json({ error: "title must be a non-empty string" }, { status: 400 });
+	}
+	const body = rawBody as { title?: unknown } | null;
+	if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.title !== "string" || body.title.trim() === "") {
 		return Response.json({ error: "title must be a non-empty string" }, { status: 400 });
 	}
 	const title = body.title.trim();
+	if (title.length > MAX_CHAT_TITLE_CHARS) {
+		return Response.json({ error: "title must be at most 500 characters" }, { status: 400 });
+	}
 	const record = await stores.chatStore.renameChat(id, title);
 	return Response.json({ title: record.title });
 }

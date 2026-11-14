@@ -774,13 +774,31 @@ export function getSqliteBackend(): Promise<SqliteStoreBackend | null> {
 			);
 			const dbPath = process.env.LH_SQLITE_DB ? path.resolve(process.env.LH_SQLITE_DB) : defaultMacDb;
 			if (!fs.existsSync(dbPath)) return null;
+			try {
+				fs.chmodSync(dbPath, 0o600);
+			} catch (err) {
+				if (process.platform !== "win32") throw err;
+			}
 			const sqlite = await import(/* @vite-ignore */ "node:sqlite");
 			const db = new sqlite.DatabaseSync(dbPath) as unknown as SqliteDb;
 			db.exec("PRAGMA busy_timeout = 5000;");
 			const authPath = path.join(path.dirname(dbPath), "auth.json");
 			return buildBackend(db, {
 				read: () => (fs.existsSync(authPath) ? fs.readFileSync(authPath, "utf8") : null),
-				write: (content: string) => fs.writeFileSync(authPath, content, { encoding: "utf8", mode: 0o600 }),
+				write: (content: string) => {
+					const tmp = `${authPath}.${process.pid}.${Date.now()}.tmp`;
+					try {
+						fs.writeFileSync(tmp, content, { encoding: "utf8", mode: 0o600 });
+						fs.renameSync(tmp, authPath);
+					} catch (err) {
+						try {
+							fs.unlinkSync(tmp);
+						} catch {
+							// ignore temp cleanup failure
+						}
+						throw err;
+					}
+				},
 			});
 		} catch (err) {
 			console.warn("SQLite dev backend unavailable, falling back to memory:", err);

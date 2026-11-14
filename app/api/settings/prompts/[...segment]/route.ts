@@ -26,14 +26,19 @@
  */
 
 import {
+	CustomBodyLimitError,
 	allSegmentPaths,
 	isValidSegmentPath,
 	promptOverrides,
+	readBoundedJson,
 	readSettingsRecord,
 	writeSettingsRecord,
 } from "@/src/server";
 
 export const dynamic = "force-dynamic";
+
+const MAX_PROMPT_BODY_BYTES = 512 * 1024;
+const MAX_PROMPT_TEXT_CHARS = 200_000;
 
 /** Re-join the catch-all segments into the mirror-layout path; null when
  *  the shape is invalid (traversal, wrong layout — the store re-guards). */
@@ -46,9 +51,21 @@ export async function PUT(request: Request, ctx: { params: Promise<{ segment: st
 	const { segment } = await ctx.params;
 	const path = segmentPathFrom(segment);
 	if (!path) return Response.json({ error: "invalid segment path" }, { status: 400 });
-	const body = (await request.json().catch(() => null)) as { text?: unknown } | null;
-	if (!body || typeof body.text !== "string") {
+	let rawBody: unknown;
+	try {
+		rawBody = await readBoundedJson(request, MAX_PROMPT_BODY_BYTES);
+	} catch (error) {
+		if (error instanceof CustomBodyLimitError) {
+			return Response.json({ error: "body exceeds 512 KiB limit" }, { status: 413 });
+		}
 		return Response.json({ error: "body must be {text: string}" }, { status: 400 });
+	}
+	const body = rawBody as { text?: unknown } | null;
+	if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.text !== "string") {
+		return Response.json({ error: "body must be {text: string}" }, { status: 400 });
+	}
+	if (body.text.length > MAX_PROMPT_TEXT_CHARS) {
+		return Response.json({ error: "text exceeds 200000 character limit" }, { status: 400 });
 	}
 	if (!new Set(allSegmentPaths()).has(path)) {
 		return Response.json(

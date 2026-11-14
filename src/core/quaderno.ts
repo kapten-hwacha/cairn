@@ -321,9 +321,12 @@ function normalizeInsideCe(ceContent: string): string {
 	return s;
 }
 
+const MAX_CHEM_REGEX_LINE_LENGTH = 4096;
+
 const RX_VERBOSE_RUN = /(?:\\(?:text|mathrm)\{[A-Za-z0-9()]+\}(?:_(?:\{?\d+\}?|\d)|\^(?:\{[0-9+-]+\}|[0-9+-]+))*)+/g;
 
 function convertVerboseRun(full: string): string {
+	if (full.length > MAX_CHEM_REGEX_LINE_LENGTH) return full;
 	const rxUnit = /\\(?:text|mathrm)\{([A-Za-z0-9()]+)\}(?:_(?:\{?(\d+)\}?|(\d)))?(?:\^(?:\{?([0-9+-]+)\}?))?/g;
 	let match: RegExpExecArray | null;
 	let combined = "";
@@ -349,32 +352,58 @@ function convertVerboseRun(full: string): string {
 
 const RX_UNICODE_FORMULA = /(?<![A-Za-z0-9])([1-9]\d*)?((?:[A-Z][a-z]?|\([A-Za-z0-9()]+\)|[0-9\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B])*[₀-₉⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]*)(?![A-Za-z0-9\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B])/g;
 
+const RX_REACTION = /((?:(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+\s*\+\s*)*(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+)\s*(⇌|⇋|⟶|→|->|<=>)\s*((?:(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+\s*\+\s*)*(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+)/g;
+
+function normalizeProseChunk(chunk: string): string {
+	let text = chunk;
+	if (text.length <= MAX_CHEM_REGEX_LINE_LENGTH) {
+		text = text.replace(RX_REACTION, (full, left: string, arrow: string, right: string) => {
+			const leftTerms = left.split("+").map((s) => s.trim());
+			const rightTerms = right.split("+").map((s) => s.trim());
+			if (!leftTerms.every(isChemTerm) || !rightTerms.every(isChemTerm)) return full;
+			const hasUnicode = /[\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B⇌⇋⟶→]/.test(full);
+			if (!hasUnicode) return full;
+			const arrowMap: Record<string, string> = { "⇌": "<=>", "⇋": "<=>", "⟶": "->", "→": "->", "<=>": "<=>", "->": "->" };
+			const normArrow = arrowMap[arrow] || "->";
+			const normLeft = leftTerms.map(unicodeFormulaToMhchem).join(" + ");
+			const normRight = rightTerms.map(unicodeFormulaToMhchem).join(" + ");
+			return `$\\ce{${normLeft} ${normArrow} ${normRight}}$`;
+		});
+
+		text = text.replace(RX_UNICODE_FORMULA, (match) => {
+			if (isValidChemicalFormula(match)) {
+				return `$\\ce{${unicodeFormulaToMhchem(match)}}$`;
+			}
+			return match;
+		});
+	}
+
+	return text.replace(/[⇌⇋]/g, "$\\ce{<=>}$");
+}
+
 function normalizeProse(prose: string): string {
-	const rxReaction = /((?:(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+\s*\+\s*)*(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+)\s*(⇌|⇋|⟶|→|->|<=>)\s*((?:(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+\s*\+\s*)*(?:[1-9]\d*\s*)?[A-Za-z0-9()\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B]+)/g;
+	if (prose.length <= MAX_CHEM_REGEX_LINE_LENGTH) {
+		return normalizeProseChunk(prose);
+	}
+	return prose.split("\n").map(normalizeProseChunk).join("\n");
+}
 
-	let text = prose.replace(rxReaction, (full, left: string, arrow: string, right: string) => {
-		const leftTerms = left.split("+").map((s) => s.trim());
-		const rightTerms = right.split("+").map((s) => s.trim());
-		if (!leftTerms.every(isChemTerm) || !rightTerms.every(isChemTerm)) return full;
-		const hasUnicode = /[\u2080-\u2089\u2070\u00B9\u00B2\u00B3\u2074-\u2079\u207A\u207B⇌⇋⟶→]/.test(full);
-		if (!hasUnicode) return full;
-		const arrowMap: Record<string, string> = { "⇌": "<=>", "⇋": "<=>", "⟶": "->", "→": "->", "<=>": "<=>", "->": "->" };
-		const normArrow = arrowMap[arrow] || "->";
-		const normLeft = leftTerms.map(unicodeFormulaToMhchem).join(" + ");
-		const normRight = rightTerms.map(unicodeFormulaToMhchem).join(" + ");
-		return `$\\ce{${normLeft} ${normArrow} ${normRight}}$`;
-	});
+function normalizeMathChunk(chunk: string): string {
+	let inner = chunk.replace(/\\ce\{([^}]+)\}/g, (_m, body) => `\\ce{${normalizeInsideCe(body)}}`);
 
-	text = text.replace(RX_UNICODE_FORMULA, (match) => {
-		if (isValidChemicalFormula(match)) {
-			return `$\\ce{${unicodeFormulaToMhchem(match)}}$`;
-		}
-		return match;
-	});
+	if (inner.length <= MAX_CHEM_REGEX_LINE_LENGTH) {
+		// 2. Verbose LaTeX runs
+		inner = inner.replace(RX_VERBOSE_RUN, convertVerboseRun);
 
-	text = text.replace(/[⇌⇋]/g, "$\\ce{<=>}$");
+		// 3. Unicode chemical tokens inside math
+		inner = inner.replace(RX_UNICODE_FORMULA, (m) => {
+			if (isValidChemicalFormula(m)) return `\\ce{${unicodeFormulaToMhchem(m)}}`;
+			return m;
+		});
+	}
 
-	return text;
+	// 4. Unicode harpoon in math
+	return inner.replace(/[⇌⇋]/g, "\\ce{<=>}");
 }
 
 function normalizeMath(math: string): string {
@@ -393,20 +422,10 @@ function normalizeMath(math: string): string {
 		inner = math;
 	}
 
-	// 1. Existing \ce{...}
-	inner = inner.replace(/\\ce\{([^}]+)\}/g, (_m, body) => `\\ce{${normalizeInsideCe(body)}}`);
-
-	// 2. Verbose LaTeX runs
-	inner = inner.replace(RX_VERBOSE_RUN, convertVerboseRun);
-
-	// 3. Unicode chemical tokens inside math
-	inner = inner.replace(RX_UNICODE_FORMULA, (m) => {
-		if (isValidChemicalFormula(m)) return `\\ce{${unicodeFormulaToMhchem(m)}}`;
-		return m;
-	});
-
-	// 4. Unicode harpoon in math
-	inner = inner.replace(/[⇌⇋]/g, "\\ce{<=>}");
+	inner =
+		inner.length <= MAX_CHEM_REGEX_LINE_LENGTH
+			? normalizeMathChunk(inner)
+			: inner.split("\n").map(normalizeMathChunk).join("\n");
 
 	return prefix + inner + suffix;
 }

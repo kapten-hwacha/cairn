@@ -121,3 +121,20 @@ test("chatgpt module uses only the private JSON path, with no safeStorage depend
 	const auth = await fs.readFile(new URL("../../src/server/subscriptions/chatgpt.cjs", import.meta.url), "utf8");
 	assert.doesNotMatch(auth, /safeStorage|encryptedStore|chatgpt-credentials\.enc\.json/);
 });
+
+test("SEC-13: fileStore.read rejects symlinks and overly permissive file modes", async () => {
+	if (process.platform === "win32") return;
+	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "lh-chatgpt-perm-"));
+	const file = path.join(dir, "chatgpt-credentials.json");
+	const symlink = path.join(dir, "symlink-credentials.json");
+	try {
+		await fileStore(file).write(initial());
+		await fs.symlink(file, symlink);
+		await assert.rejects(fileStore(symlink).read(), /^Error: storage$/);
+
+		await fs.chmod(file, 0o644);
+		await assert.rejects(fileStore(file).read(), /^Error: storage$/);
+	} finally {
+		await fs.rm(dir, { recursive: true, force: true });
+	}
+});

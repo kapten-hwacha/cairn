@@ -62,3 +62,4 @@ export { cliproxyInstallationResponse } from "./cliproxy.ts";
 // No import side effects; the boot sync lives in stores.ts.
 export * from "./custom-provider.ts";
 export { customProviderGet, customProviderMutation } from "./custom-provider-http.ts";
+export { CustomBodyLimitError, readBoundedJson } from "./custom-provider-body.ts";

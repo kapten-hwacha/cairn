@@ -401,6 +401,43 @@ describe("discoverModels", () => {
 		assert.equal(r.ok, false);
 		assert.equal(called, false, "no fetch for a non-http scheme");
 	});
+	it("blocks cloud metadata and link-local hosts before any fetch while allowing localhost and LAN RFC1918", async () => {
+		let calls = 0;
+		globalThis.fetch = (async () => {
+			calls++;
+			return new Response(JSON.stringify({ data: [{ id: "local-model" }] }), { status: 200 });
+		}) as unknown as typeof fetch;
+
+		for (const blocked of [
+			"http://0.0.0.0:11434/v1",
+			"http://169.254.169.254/latest/meta-data",
+			"http://metadata/v1",
+			"http://metadata.google.internal/v1",
+			"http://100.100.100.200/v1",
+			"http://[fe80::1]:8000/v1",
+			"http://[fd00:ec2::254]/v1",
+			"http://[::ffff:169.254.169.254]/v1",
+			"http://[::169.254.169.254]/v1",
+			"http://[64:ff9b::169.254.169.254]/v1",
+		]) {
+			const res = await discoverModels(blocked);
+			assert.equal(res.ok, false, `expected ${blocked} to fail`);
+			if (!res.ok) assert.equal(res.fatal, true);
+		}
+		assert.equal(calls, 0, "no fetch on blocked metadata/link-local addresses");
+
+		for (const allowed of [
+			"http://127.0.0.1:11434/v1",
+			"http://localhost:11434/v1",
+			"http://[::1]:11434/v1",
+			"http://192.168.1.25:8000/v1",
+			"http://10.0.0.5:8000/v1",
+		]) {
+			const res = await discoverModels(allowed);
+			assert.equal(res.ok, true, `expected ${allowed} to remain allowed`);
+		}
+		assert.equal(calls, 5);
+	});
 	it("reports a non-2xx and an unparseable shape as honest errors", async () => {
 		stubFetch(() => ({ status: 500, body: {} }));
 		assert.equal((await discoverModels("http://h/v1")).ok, false);

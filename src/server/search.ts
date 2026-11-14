@@ -26,6 +26,15 @@ import { effectiveSettings } from "./stores.ts";
 /** The wire-callable shape the adapters close over (tests inject a stub). */
 type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
+function sanitizeSearchErrorDetail(raw: string, apiKey: string): string {
+	let cleaned = raw
+		.replace(/[\x00-\x1f\x7f]+/g, " ")
+		.replace(/\b(Bearer|Token)\s+[A-Za-z0-9._~+/-]+=*/gi, "$1 [REDACTED]")
+		.trim();
+	if (apiKey) cleaned = cleaned.replaceAll(apiKey, "[REDACTED]");
+	return cleaned.slice(0, 200);
+}
+
 /** Tavily: POST https://api.tavily.com/search — Bearer auth in the
  *  Authorization header (the current documented scheme; the legacy
  *  api_key-in-body form is retired), query + max_results (0–20) in the
@@ -46,17 +55,18 @@ export function tavilyProvider(apiKey: string, fetchFn: FetchLike = fetch): Sear
 				signal: AbortSignal.timeout(30_000),
 			});
 			if (!resp.ok) {
-				const body = await resp.text();
 				// Their error body is {detail: {error: "…"}} — surface the
-				// message when present, else the raw slice.
-				let detail = body.slice(0, 200);
+				// sanitized message when present, never raw unparsed HTML/bodies.
+				let detail = "";
 				try {
-					const parsed = JSON.parse(body) as { detail?: { error?: string } };
-					if (parsed.detail?.error) detail = parsed.detail.error.slice(0, 200);
+					const parsed = (await resp.json()) as { detail?: { error?: string } };
+					if (typeof parsed?.detail?.error === "string") {
+						detail = sanitizeSearchErrorDetail(parsed.detail.error, apiKey);
+					}
 				} catch {
-					/* keep the raw slice */
+					/* omit raw unparsed error body */
 				}
-				throw new Error(`Tavily search API ${resp.status}: ${detail}`);
+				throw new Error(detail ? `Tavily search API ${resp.status}: ${detail}` : `Tavily search API ${resp.status}`);
 			}
 			const data = (await resp.json()) as {
 				results?: Array<{ title?: string; url?: string; content?: string }>;
@@ -91,8 +101,8 @@ export function braveProvider(apiKey: string, fetchFn: FetchLike = fetch): Searc
 				signal: AbortSignal.timeout(30_000),
 			});
 			if (!resp.ok) {
-				const body = await resp.text();
-				throw new Error(`Brave search API ${resp.status}: ${body.slice(0, 200)}`);
+				await resp.body?.cancel();
+				throw new Error(`Brave search API ${resp.status}`);
 			}
 			const data = (await resp.json()) as {
 				web?: { results?: Array<{ title?: string; url?: string; description?: string }> };

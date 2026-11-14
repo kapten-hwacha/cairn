@@ -54,10 +54,12 @@ test("native bridge decodes responses without Node Buffer", async () => {
 	}
 });
 
-test("token helper preserves key and provider error handling", async () => {
+test("token helper preserves key and provider error handling without leaking raw error body", async () => {
 	const missing = await mintDictationToken(undefined, async () => { throw new Error("unexpected request"); });
 	assert.equal(missing.status, 503);
-	const failed = await mintDictationToken("test-key", async () => new Response("denied", { status: 403 }));
+	const failed = await mintDictationToken("test-key", async () => new Response("<html>secret-body-leaked</html>", { status: 403 }));
 	assert.equal(failed.status, 502);
-	assert.match((await failed.json()).message, /403/);
+	const payload = (await failed.json()) as { message: string };
+	assert.match(payload.message, /403/);
+	assert.equal(payload.message.includes("secret-body-leaked"), false);
 });

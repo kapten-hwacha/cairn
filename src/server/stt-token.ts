@@ -12,8 +12,8 @@ export async function mintDictationToken(key: string | undefined, request: typeo
 			body: JSON.stringify({ ttl_seconds: 300 }),
 		});
 		if (!res.ok) {
-			const detail = await res.text();
-			return Response.json({ message: `Deepgram token grant failed (${res.status}): ${detail.slice(0, 200)}` }, { status: 502 });
+			await res.body?.cancel();
+			return Response.json({ message: `Deepgram token grant failed (${res.status})` }, { status: 502 });
 		}
 		const data = (await res.json()) as { access_token?: string };
 		if (!data.access_token) return Response.json({ message: "Deepgram grant returned no token" }, { status: 502 });
