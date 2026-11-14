@@ -40,6 +40,8 @@ export function parsePlotExpression(
 		) ?? [];
 	if (tokens.length > 256) throw new Error("Expression is too complex");
 	let pos = 0;
+	let hasExplicitX = false;
+	let aliasVar: string | null = null;
 	function primary(): PlotExpression {
 		const token = tokens[pos++];
 		if (token === "(") {
@@ -58,8 +60,38 @@ export function parsePlotExpression(
 			token === "pi" ||
 			token === "e" ||
 			(mode === "display" && token && /^[a-zA-Z]$/.test(token))
-		)
+		) {
+			if (mode === "numeric" && token === "x") {
+				if (aliasVar !== null) {
+					throw new Error(
+						`Unsupported expression token: x (cannot mix 'x' with '${aliasVar}'; use 'x' as the independent variable)`,
+					);
+				}
+				hasExplicitX = true;
+			}
 			return { kind: "identifier", name: token };
+		}
+		if (
+			mode === "numeric" &&
+			token &&
+			/^[a-zA-Z]$/.test(token) &&
+			token !== "y" &&
+			token !== "z" &&
+			tokens[pos] !== "("
+		) {
+			if (hasExplicitX) {
+				throw new Error(
+					`Unsupported expression token: ${token} (use 'x' as the independent variable)`,
+				);
+			}
+			if (aliasVar !== null && aliasVar !== token) {
+				throw new Error(
+					`Unsupported expression token: ${token} (multiple variables '${aliasVar}' and '${token}'; use 'x' as the independent variable)`,
+				);
+			}
+			aliasVar = token;
+			return { kind: "identifier", name: "x" };
+		}
 		if (token && Object.hasOwn(functions, token) && tokens[pos++] === "(") {
 			const args = [sum()];
 			while (tokens[pos] === ",") {
@@ -71,7 +103,7 @@ export function parsePlotExpression(
 			return { kind: "call", name: token, arguments: args };
 		}
 		throw new Error(
-			`Unsupported expression token: ${token ?? "end of expression"}`,
+			`Unsupported expression token: ${token ?? "end of expression"}${mode === "numeric" && token && /^[a-zA-Z]/.test(token) ? " (use 'x' as the independent variable)" : ""}`,
 		);
 	}
 	function power(): PlotExpression {

@@ -58,6 +58,13 @@ test("shared numeric parser keeps the bounded expression grammar and precedence"
 		compilePlotExpression("exp(-x/2)*sin(3*x)")(2),
 		Math.exp(-1) * Math.sin(6),
 	);
+	assert.equal(
+		compilePlotExpression("20*log10(1/sqrt(1 + (f/1000)^2))")(1000),
+		20 * Math.log10(1 / Math.SQRT2),
+	);
+	assert.throws(() => compilePlotExpression("f + t"), /multiple variables/);
+	assert.throws(() => compilePlotExpression("x + f"), /use 'x'/);
+	assert.throws(() => compilePlotExpression("f(2)"), /Unsupported expression token: f/);
 	assert.throws(() => compilePlotExpression("y+1"));
 	assert.equal(parsePlotExpression("y", "display").kind, "identifier");
 	assert.throws(() => compilePlotExpression("process.exit()"));
