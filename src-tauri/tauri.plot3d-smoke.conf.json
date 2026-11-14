@@ -1,0 +1,21 @@
+{
+  "productName": "LearnHarness Plot3D Smoke",
+  "identifier": "com.hwacha.learnharness.plot3d-smoke",
+  "build": {
+    "beforeBuildCommand": "npm exec -- vite build --mode plot3d-smoke",
+    "frontendDist": "../dist-web-plot3d-smoke"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "LearnHarness 3D verification",
+        "url": "plot3d-smoke.html",
+        "width": 1100,
+        "height": 850,
+        "incognito": true
+      }
+    ]
+  },
+  "bundle": { "active": false }
+}

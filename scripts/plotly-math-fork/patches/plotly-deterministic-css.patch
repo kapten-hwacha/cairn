@@ -1,0 +1,55 @@
+--- a/esbuild-config.js
++++ b/esbuild-config.js
+@@ -1,6 +1,6 @@
+ const { environmentPlugin } = require('esbuild-plugin-environment');
+ const { glsl } = require('esbuild-plugin-glsl');
+-const InlineCSSPlugin = require('esbuild-plugin-inline-css');
++const InlineCSSPlugin = require('./tasks/util/inline_css');
+ const path = require('path');
+ const constants = require('./tasks/util/constants.js');
+ 
+@@ -12,7 +12,7 @@
+     bundle: true,
+     minify: false,
+     sourcemap: false,
+-    plugins: [InlineCSSPlugin(), glsl({ minify: true }), environmentPlugin({ NODE_DEBUG: false })],
++    plugins: [InlineCSSPlugin(constants.pathToRoot), glsl({ minify: true }), environmentPlugin({ NODE_DEBUG: false })],
+     alias: {
+         // Force users of regl (gl-text) to use the plotly flavor to deduplicate code
+         regl: '@plotly/regl',
+--- /dev/null
++++ b/tasks/util/inline_css.js
+@@ -0,0 +1,33 @@
++'use strict';
++
++var fs = require('fs');
++var path = require('path');
++var crypto = require('crypto');
++
++/** Checkout-independent CSS injection for the isolated prototype builds. */
++module.exports = function inlineCss(projectRoot) {
++    return {
++        name: 'checkout-relative-inline-css',
++        setup: function (build) {
++            build.onLoad({ filter: /\.css$/ }, function (args) {
++                var relativePath = path.relative(projectRoot, args.path).split(path.sep).join('/');
++                if (relativePath === '..' || relativePath.indexOf('../') === 0 || path.isAbsolute(relativePath)) {
++                    throw new Error('CSS source is outside the verified checkout');
++                }
++                var id = crypto.createHash('sha256').update(relativePath).digest('hex');
++                var css = fs.readFileSync(args.path, 'utf8');
++                return {
++                    contents:
++                        '(function(){if(!document.getElementById(' +
++                        JSON.stringify(id) +
++                        ')){var e=document.createElement("style");e.id=' +
++                        JSON.stringify(id) +
++                        ';e.textContent=' +
++                        JSON.stringify(css) +
++                        ';document.head.appendChild(e)}})();',
++                    loader: 'js'
++                };
++            });
++        }
++    };
++};

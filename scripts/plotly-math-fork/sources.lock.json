@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "plotly": {
+    "repository": "https://github.com/plotly/plotly.js.git",
+    "tag": "v4.3.0",
+    "commit": "a929a77b3522887360671c30b270828a04cf4b81"
+  },
+  "packages": {
+    "gl-axes3d": {
+      "version": "1.7.1",
+      "gitHead": "4f2b6061d18fcea3fac41a3f0915a955bb7ac287",
+      "tarball": "https://registry.npmjs.org/gl-axes3d/-/gl-axes3d-1.7.1.tgz",
+      "integrity": "sha512-nCNx5OJi7vCqOBjOxuS3eZ0KXLHRXQS8+LKTpGKuZO/vCV51O8mMAGEBnS0HFdVGY+01gFjCG6bBzgO8mFeu6w=="
+    },
+    "vectorize-text": {
+      "version": "3.2.2",
+      "gitHead": "2f8f8eca90a95e1212605ea6d403f3ed7eb90333",
+      "tarball": "https://registry.npmjs.org/vectorize-text/-/vectorize-text-3.2.2.tgz",
+      "integrity": "sha512-34NVOCpMMQVXujU4vb/c6u98h6djI0jGdtC202H4Huvzn48B6ARsR7cmGh1xsAc0pHNQiUKGK/aHF05VtGv+eA=="
+    }
+  },
+  "preimages": {
+    "package-lock.json": "d1fc46148cbc2a5fa776cd2a1f3537695cb34097c66d89eec77452b6413cb9e8",
+    "stackgl_modules/package-lock.json": "e432c4bf6ca5b0210f5a4a41677e2f181d57bf13dd13d79f2d4b5b09c2e83881",
+    "src/plot_api/plot_config.js": "2f45b5306853ad79717b7fa29fa9c0f936b31be77c3ae31f39d1250566df0d57",
+    "src/plots/gl3d/scene.js": "d39e544fbb26df706b8165cfe014c95ea1232671b4a945b0418e0bf813d701ba",
+    "stackgl_modules/webpack.config.js": "99368dc768862196f157c2a9eac139b18022b8a3fe1340999e01bc0af876876b",
+    "stackgl_modules/vendor/gl-axes3d/axes.js": "f59f172e615da9733c99403ac2cdb8cc5ac4926b5ad6e71f6419011a12c81aca",
+    "stackgl_modules/vendor/gl-axes3d/lib/text.js": "fe8c1ffe2c4e0a2ed1179505dbdd53980f5b2a5c9aa1de9b75b109ca18d3fb47",
+    "esbuild-config.js": "213ae30dc2b5b50ee37fcff38f2ae50400dcf2df35dde54c8e51325b948ccc02",
+    "stackgl_modules/vendor/gl-axes3d/lib/shaders/textVert.glsl": "7cc639c62bd215bfefe5ff79071eff17732d96ed4fbee6634343d74c424c999b"
+  },
+  "patches": {
+    "plotly-prepared-axis-text.patch": "3828919f33b6db8b1126b169b3fa7be9852143c16a1ce7d310ecafddbdd42171",
+    "gl-axes3d-prepared-titles.patch": "d1b56e1081723d52571c8f3c1833da59b554695976476391650b522ff3aab959",
+    "plotly-stackgl-alias.patch": "ec0548da9d6105118ed69887e0aea7211af7b6b5955dde77be9bfde0f9322b5b",
+    "plotly-deterministic-css.patch": "2f8f1b37ff8cd828a1391dd29c9f9185eb76f829af3a9cf0d4595e30c4bba7f8",
+    "gl-axes3d-title-bounds.patch": "daf9f7f4be28dae53c0379c2339ef8d45257246c232026cc77aa3fa9c5777423"
+  },
+  "labelHelperSha256": "4e7ec8eca5c5eee475606f5e7c0cc8377a3d73206c50ccc69908c24d7925059b",
+  "glslToolsLockSha256": "ad770d893b4beaca5763d1c75edfefe043f92b8658ecdc1e3a4ca686e685db68"
+}

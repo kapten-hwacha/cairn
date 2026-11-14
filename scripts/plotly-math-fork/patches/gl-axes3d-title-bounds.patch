@@ -1,0 +1,456 @@
+--- a/stackgl_modules/vendor/gl-axes3d/lib/text.js
++++ b/stackgl_modules/vendor/gl-axes3d/lib/text.js
+@@ -6,6 +6,7 @@
+ var createVAO = require('gl-vao')
+ var vectorizeText = require('vectorize-text')
+ var createShader = require('./shaders').text
++var computeTitleViewportAdjustment = require('./title-bounds')
+ 
+ var globals = window || process.global || {}
+ var __TEXT_CACHE = globals.__TEXT_CACHE || {}
+@@ -23,6 +24,8 @@
+   this.shader = shader
+   this.buffer = buffer
+   this.vao = vao
++  this.preparedInkBounds = [null, null, null]
++  this.titleAdjustments = [null, null, null]
+   this.tickOffset = this.tickCount = this.labelOffset = this.labelCount = null
+ }
+ 
+@@ -41,6 +44,13 @@
+   SHAPE[0] = this.gl.drawingBufferWidth
+   SHAPE[1] = this.gl.drawingBufferHeight
+   this.shader.uniforms.resolution = SHAPE
++  this.titleTransforms = {
++    model: model,
++    view: view,
++    projection: projection,
++    pixelScale: pixelScale,
++    resolution: SHAPE,
++  }
+ }
+ 
+ proto.unbind = function () {
+@@ -56,6 +66,8 @@
+   preparedLabels
+ ) {
+   var data = []
++  this.preparedInkBounds = [null, null, null]
++  this.titleAdjustments = [null, null, null]
+   this.preparedUploadCount = this.preparedUploadCount || 0
+   var sprites = this
+ 
+@@ -107,6 +119,18 @@
+     superscripts: true,
+   }
+   for (var d = 0; d < 3; ++d) {
++    var prepared = preparedLabels && preparedLabels[d]
++    if (prepared) {
++      var ink = [Infinity, Infinity, -Infinity, -Infinity]
++      for (var k = 0; k < prepared.positions.length; k++) {
++        var p = prepared.positions[k]
++        ink[0] = Math.min(ink[0], p[0])
++        ink[1] = Math.min(ink[1], -p[1])
++        ink[2] = Math.max(ink[2], p[0])
++        ink[3] = Math.max(ink[3], -p[1])
++      }
++      this.preparedInkBounds[d] = ink
++    }
+     //Generate label
+     labelOffset[d] = (data.length / VERTEX_SIZE) | 0
+     addItem(
+@@ -168,6 +192,9 @@
+     return
+   }
+ 
++  this.shader.uniforms.preparedTitleEnabled = false
++  this.shader.uniforms.preparedTitleShift = [0, 0]
++  this.shader.uniforms.preparedTitleAngle = 0
+   this.shader.uniforms.axis = axis
+   this.shader.uniforms.color = color
+   this.shader.uniforms.angle = angle
+@@ -193,6 +220,30 @@
+     return
+   }
+ 
++  var ink = this.preparedInkBounds[d]
++  var adjustment = ink
++    ? computeTitleViewportAdjustment({
++        model: this.titleTransforms.model,
++        view: this.titleTransforms.view,
++        projection: this.titleTransforms.projection,
++        pixelScale: this.titleTransforms.pixelScale,
++        resolution: this.titleTransforms.resolution,
++        offset: offset,
++        inkBounds: ink,
++        scale: scale,
++        angle: angle,
++        alignDir: alignDir,
++        alignOpt: alignOpt,
++      })
++    : null
++  this.titleAdjustments[d] = adjustment
++  this.shader.uniforms.preparedTitleEnabled = !!adjustment
++  this.shader.uniforms.preparedTitleShift = adjustment
++    ? adjustment.shiftClip
++    : [0, 0]
++  this.shader.uniforms.preparedTitleAngle = adjustment
++    ? adjustment.angleRadians
++    : 0
+   this.shader.uniforms.axis = axis
+   this.shader.uniforms.color = color
+   this.shader.uniforms.angle = angle
+--- /dev/null
++++ b/stackgl_modules/vendor/gl-axes3d/lib/title-bounds.js
+@@ -0,0 +1,190 @@
++'use strict'
++
++module.exports = computeTitleViewportAdjustment
++
++/**
++ * @typedef {Object} TitleOptions
++ * @property {ArrayLike<number>} model
++ * @property {ArrayLike<number>} view
++ * @property {ArrayLike<number>} projection
++ * @property {ArrayLike<number>} offset
++ * @property {ArrayLike<number>} inkBounds x/y-up minX,minY,maxX,maxY in em
++ * @property {number} scale Native title font size
++ * @property {number} pixelScale Native drawing-buffer pixels per CSS pixel
++ * @property {ArrayLike<number>} resolution Drawing-buffer width,height
++ * @property {number} angle Native explicit angle
++ * @property {ArrayLike<number>} alignDir
++ * @property {ArrayLike<number>} alignOpt
++ */
++
++var PI = 3.141592
++var HALF_PI = 0.5 * PI
++
++function finiteVector(value, length) {
++  if (!value || value.length !== length)
++    throw new Error('Invalid title bounds transform')
++  for (var i = 0; i < length; i++) {
++    if (!Number.isFinite(value[i]))
++      throw new Error('Invalid title bounds transform')
++  }
++}
++
++function multiply(matrix, vector) {
++  var result = [0, 0, 0, 0]
++  for (var i = 0; i < 4; i++) {
++    result[i] =
++      matrix[i] * vector[0] +
++      matrix[i + 4] * vector[1] +
++      matrix[i + 8] * vector[2] +
++      matrix[i + 12] * vector[3]
++  }
++  return result
++}
++
++function project(options, point) {
++  var clip = multiply(
++    options.projection,
++    multiply(
++      options.view,
++      multiply(options.model, [point[0], point[1], point[2], 1])
++    )
++  )
++  var w = Math.max(clip[3], 0.0001)
++  var result = [clip[0] / w, clip[1] / w, clip[2] / w]
++  if (!result.every(Number.isFinite))
++    throw new Error('Invalid title bounds projection')
++  return result
++}
++
++function positiveAngle(angle) {
++  var a = angle < 0 ? angle + 2 * PI : angle
++  return a - Math.floor(a / PI) * PI
++}
++function lookUpwards(angle) {
++  var b = positiveAngle(angle)
++  return b > HALF_PI && b <= 1.5 * PI ? b - PI : b
++}
++function alignmentAngle(raw, delta, option, ratio) {
++  if (option > 2) {
++    var div = (2 * PI) / option
++    var rounded =
++      div * Math.floor((positiveAngle(raw + delta) + 0.5 * div) / div)
++    return lookUpwards(rounded)
++  }
++  if (option === 2) {
++    var b = positiveAngle(raw + delta)
++    return b < ratio * HALF_PI
++      ? 0
++      : b < (2 - ratio) * HALF_PI
++        ? -HALF_PI
++        : b < (2 + ratio) * HALF_PI
++          ? 0
++          : b < (4 - ratio) * HALF_PI
++            ? HALF_PI
++            : 0
++  }
++  if (option === 1) return raw + delta
++  if (option === 0) return lookUpwards(raw)
++  if (option === -1) return 0
++  return raw
++}
++
++/**
++ * Keeps a complete rotated prepared title inside a two-CSS-pixel inset.
++ * Never changes geometry, size, depth or camera; oversized boxes fail explicitly.
++ * @param {TitleOptions} options
++ * @returns {{fits: boolean, angleRadians: number, shiftClip: number[], inkBoundsClip: number[]}}
++ */
++function computeTitleViewportAdjustment(options) {
++  ;['model', 'view', 'projection'].forEach(function (key) {
++    finiteVector(options[key], 16)
++  })
++  ;['offset', 'alignDir', 'alignOpt'].forEach(function (key) {
++    finiteVector(options[key], 3)
++  })
++  finiteVector(options.inkBounds, 4)
++  finiteVector(options.resolution, 2)
++  if (
++    ![options.scale, options.pixelScale, options.angle].every(
++      Number.isFinite
++    ) ||
++    options.scale <= 0 ||
++    options.pixelScale <= 0 ||
++    options.resolution[0] <= 0 ||
++    options.resolution[1] <= 0 ||
++    options.inkBounds[0] > options.inkBounds[2] ||
++    options.inkBounds[1] > options.inkBounds[3]
++  )
++    throw new Error('Invalid title bounds transform')
++  var anchor = project(options, options.offset)
++  var beta = options.angle
++  if (options.alignOpt[2] !== 0) {
++    var next = project(options, [
++      options.offset[0] + options.alignDir[0],
++      options.offset[1] + options.alignDir[1],
++      options.offset[2] + options.alignDir[2],
++    ])
++    var clipAngle = Math.atan2(
++      (next[1] - anchor[1]) * options.resolution[1],
++      (next[0] - anchor[0]) * options.resolution[0]
++    )
++    if (Math.sin(clipAngle) < 0) clipAngle += PI
++    var flip =
++      Math.cos(HALF_PI) * Math.sin(clipAngle) -
++        Math.sin(HALF_PI) * Math.cos(clipAngle) >
++      0
++        ? 1
++        : 0
++    beta += alignmentAngle(
++      clipAngle,
++      flip * PI,
++      Math.floor(options.alignOpt[0] + 0.001),
++      options.alignOpt[1]
++    )
++  }
++  // Use exactly the float sent to the shader for the CPU corner calculation.
++  beta = Math.fround(beta)
++  var c = Math.cos(beta),
++    s = Math.sin(beta),
++    factor = options.scale * options.pixelScale
++  var min = [Infinity, Infinity],
++    max = [-Infinity, -Infinity]
++  for (var xi = 0; xi < 2; xi++)
++    for (var yi = 0; yi < 2; yi++) {
++      var x = options.inkBounds[xi * 2],
++        y = options.inkBounds[yi * 2 + 1]
++      var dx = (2 * factor * (c * x - s * y)) / options.resolution[0]
++      var dy = (2 * factor * (s * x + c * y)) / options.resolution[1]
++      min[0] = Math.min(min[0], dx)
++      max[0] = Math.max(max[0], dx)
++      min[1] = Math.min(min[1], dy)
++      max[1] = Math.max(max[1], dy)
++    }
++  var inset = [
++    (4 * options.pixelScale) / options.resolution[0],
++    (4 * options.pixelScale) / options.resolution[1],
++  ]
++  var lower = [-1 + inset[0] - min[0], -1 + inset[1] - min[1]]
++  var upper = [1 - inset[0] - max[0], 1 - inset[1] - max[1]]
++  var fits = lower[0] <= upper[0] && lower[1] <= upper[1]
++  var shift = fits
++    ? [
++        Math.min(upper[0], Math.max(lower[0], anchor[0])) - anchor[0],
++        Math.min(upper[1], Math.max(lower[1], anchor[1])) - anchor[1],
++      ]
++    : [0, 0]
++  var bounds = [
++    anchor[0] + min[0] + shift[0],
++    anchor[1] + min[1] + shift[1],
++    anchor[0] + max[0] + shift[0],
++    anchor[1] + max[1] + shift[1],
++  ]
++  if (!bounds.concat(shift, beta).every(Number.isFinite))
++    throw new Error('Invalid title bounds projection')
++  return {
++    fits: fits,
++    angleRadians: beta,
++    shiftClip: shift,
++    inkBoundsClip: bounds,
++  }
++}
+--- a/stackgl_modules/vendor/gl-axes3d/lib/shaders/textVert.glsl
++++ b/stackgl_modules/vendor/gl-axes3d/lib/shaders/textVert.glsl
+@@ -6,6 +6,9 @@
+ uniform vec3 offset, axis, alignDir, alignOpt;
+ uniform float scale, angle, pixelScale;
+ uniform vec2 resolution;
++uniform bool preparedTitleEnabled;
++uniform vec2 preparedTitleShift;
++uniform float preparedTitleAngle;
+ 
+ vec3 project(vec3 p) {
+   vec4 pp = projection * (view * (model * vec4(p, 1.0)));
+@@ -16,10 +19,7 @@
+   vec3 A = project(a);
+   vec3 B = project(b);
+ 
+-  return atan(
+-    (B.y - A.y) * resolution.y,
+-    (B.x - A.x) * resolution.x
+-  );
++  return atan((B.y - A.y) * resolution.y, (B.x - A.x) * resolution.x);
+ }
+ 
+ const float PI = 3.141592;
+@@ -28,25 +28,22 @@
+ const float ONE_AND_HALF_PI = 1.5 * PI;
+ 
+ int option = int(floor(alignOpt.x + 0.001));
+-float hv_ratio =       alignOpt.y;
+-bool enableAlign =    (alignOpt.z != 0.0);
++float hv_ratio = alignOpt.y;
++bool enableAlign = alignOpt.z != 0.0;
+ 
+ float mod_angle(float a) {
+   return mod(a, PI);
+ }
+ 
+ float positive_angle(float a) {
+-  return mod_angle((a < 0.0) ?
+-    a + TWO_PI :
+-    a
+-  );
++  return mod_angle(a < 0.0 ? a + TWO_PI : a);
+ }
+ 
+ float look_upwards(float a) {
+   float b = positive_angle(a);
+-  return ((b > HALF_PI) && (b <= ONE_AND_HALF_PI)) ?
+-    b - PI :
+-    b;
++  return b > HALF_PI && b <= ONE_AND_HALF_PI
++    ? b - PI
++    : b;
+ }
+ 
+ float look_horizontal_or_vertical(float a, float ratio) {
+@@ -57,12 +54,15 @@
+ 
+   float b = positive_angle(a);
+ 
+-  return
+-    (b < (      ratio) * HALF_PI) ? 0.0 :
+-    (b < (2.0 - ratio) * HALF_PI) ? -HALF_PI :
+-    (b < (2.0 + ratio) * HALF_PI) ? 0.0 :
+-    (b < (4.0 - ratio) * HALF_PI) ? HALF_PI :
+-                                    0.0;
++  return b < ratio * HALF_PI
++    ? 0.0
++    : b < (2.0 - ratio) * HALF_PI
++      ? -HALF_PI
++      : b < (2.0 + ratio) * HALF_PI
++        ? 0.0
++        : b < (4.0 - ratio) * HALF_PI
++          ? HALF_PI
++          : 0.0;
+ }
+ 
+ float roundTo(float a, float b) {
+@@ -77,18 +77,20 @@
+ }
+ 
+ float applyAlignOption(float rawAngle, float delta) {
+-  return
+-    (option >  2) ? look_round_n_directions(rawAngle + delta, option) :       // option 3-n: round to n directions
+-    (option == 2) ? look_horizontal_or_vertical(rawAngle + delta, hv_ratio) : // horizontal or vertical
+-    (option == 1) ? rawAngle + delta :       // use free angle, and flip to align with one direction of the axis
+-    (option == 0) ? look_upwards(rawAngle) : // use free angle, and stay upwards
+-    (option ==-1) ? 0.0 :                    // useful for backward compatibility, all texts remains horizontal
+-                    rawAngle;                // otherwise return back raw input angle
++  return option > 2
++    ? look_round_n_directions(rawAngle + delta, option) // option 3-n: round to n directions
++    : option == 2
++      ? look_horizontal_or_vertical(rawAngle + delta, hv_ratio) // horizontal or vertical
++      : option == 1
++        ? rawAngle + delta // use free angle, and flip to align with one direction of the axis
++        : option == 0
++          ? look_upwards(rawAngle) // use free angle, and stay upwards
++          : option == -1
++            ? 0.0 // useful for backward compatibility, all texts remains horizontal
++            : rawAngle; // otherwise return back raw input angle
+ }
+ 
+-bool isAxisTitle = (axis.x == 0.0) &&
+-                   (axis.y == 0.0) &&
+-                   (axis.z == 0.0);
++bool isAxisTitle = axis.x == 0.0 && axis.y == 0.0 && axis.z == 0.0;
+ 
+ void main() {
+   //Compute world offset
+@@ -102,26 +104,32 @@
+   float flip;
+ 
+   if (enableAlign) {
+-    axisAngle = (isAxisTitle) ? HALF_PI :
+-                      computeViewAngle(dataPosition, dataPosition + axis);
++    axisAngle = isAxisTitle
++      ? HALF_PI
++      : computeViewAngle(dataPosition, dataPosition + axis);
+     clipAngle = computeViewAngle(dataPosition, dataPosition + alignDir);
+ 
+-    axisAngle += (sin(axisAngle) < 0.0) ? PI : 0.0;
+-    clipAngle += (sin(clipAngle) < 0.0) ? PI : 0.0;
++    axisAngle += sin(axisAngle) < 0.0 ? PI : 0.0;
++    clipAngle += sin(clipAngle) < 0.0 ? PI : 0.0;
+ 
+-    flip = (dot(vec2(cos(axisAngle), sin(axisAngle)),
+-                vec2(sin(clipAngle),-cos(clipAngle))) > 0.0) ? 1.0 : 0.0;
++    flip =
++      dot(
++        vec2(cos(axisAngle), sin(axisAngle)),
++        vec2(sin(clipAngle), -cos(clipAngle))
++      ) >
++      0.0
++        ? 1.0
++        : 0.0;
+ 
+     beta += applyAlignOption(clipAngle, flip * PI);
+   }
+ 
++  if (preparedTitleEnabled) beta = preparedTitleAngle;
++
+   //Compute plane offset
+   vec2 planeCoord = position.xy * pixelScale;
+ 
+-  mat2 planeXform = scale * mat2(
+-     cos(beta), sin(beta),
+-    -sin(beta), cos(beta)
+-  );
++  mat2 planeXform = scale * mat2(cos(beta), sin(beta), -sin(beta), cos(beta));
+ 
+   vec2 viewOffset = 2.0 * planeXform * planeCoord / resolution;
+ 
+@@ -131,6 +139,8 @@
+   //Apply text offset in clip coordinates
+   clipPosition += vec3(viewOffset, 0.0);
+ 
++  if (preparedTitleEnabled) clipPosition.xy += preparedTitleShift;
++
+   //Done
+   gl_Position = vec4(clipPosition, 1.0);
+ }
