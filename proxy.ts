@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
 		origin !== null &&
 		(origin === "tauri://localhost" ||
 			origin === "http://tauri.localhost" ||
-			origin.startsWith("tauri://"));
+			origin === "https://tauri.localhost");
 
 	if (request.method === "OPTIONS" && isDevTauri) {
 		return new NextResponse(null, {
@@ -37,7 +37,7 @@ export function proxy(request: NextRequest) {
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 	}
-	if (!desktopAPIAuthorized(request.headers)) {
+	if (!desktopAPIAuthorized(request.headers, process.env, request.url)) {
 		return NextResponse.json(
 			{ error: "Desktop API access requires the trusted LearnHarness window." },
 			{ status: 403, headers: { "Cache-Control": "no-store" } },

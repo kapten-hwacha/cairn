@@ -794,10 +794,46 @@ describe("sameOriginAuthorized Unified CSRF Guard", () => {
 			true,
 		);
 
-		// Allows matching same-origin with x-forwarded-host
+		// Rejects forged x-forwarded-host (never trusted without matching Host)
 		assert.equal(
 			sameOriginAuthorized(new Headers({ origin: "http://learnharness.test", "x-forwarded-host": "learnharness.test" })),
+			false,
+		);
+		assert.equal(
+			sameOriginAuthorized(
+				new Headers({
+					origin: "https://evil.example",
+					host: "localhost:3000",
+					"x-forwarded-host": "evil.example",
+				}),
+			),
+			false,
+		);
+
+		// Rejects DNS-rebinding Host headers unless listed in LH_ALLOWED_HOSTS
+		assert.equal(
+			sameOriginAuthorized(new Headers({ host: "rebind.attacker.example:3000" })),
+			false,
+		);
+		assert.equal(
+			sameOriginAuthorized(
+				new Headers({ origin: "http://rebind.attacker.example:3000", host: "rebind.attacker.example:3000" }),
+			),
+			false,
+		);
+		assert.equal(
+			sameOriginAuthorized(
+				new Headers({ origin: "http://custom.internal:3000", host: "custom.internal:3000" }),
+				undefined,
+				{ LH_ALLOWED_HOSTS: "custom.internal" },
+			),
 			true,
+		);
+
+		// Rejects wildcard tauri:// origins that are not exact tauri://localhost
+		assert.equal(
+			sameOriginAuthorized(new Headers({ origin: "tauri://evil.example", host: "localhost:3000" })),
+			false,
 		);
 
 		// Allows matching same-origin with request URL
