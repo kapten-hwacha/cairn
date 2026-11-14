@@ -2463,7 +2463,7 @@ function DockOverlay({
 	return (
 		<div className="pointer-events-none absolute inset-x-0 bottom-0" style={{ right: sbInset }}>
 			<div className="h-24 bg-gradient-to-t from-background via-background/85 to-transparent" />
-			<div ref={blockRef} className="relative bg-background pb-5">
+			<div ref={blockRef} className="lh-dock-safe relative bg-background pb-5">
 				{/* The dock column. While the side chat is open on a wide band it
 				    widens to the band's full width (2rem padding each side) and
 				    the question slides left to make room: max-width, padding and

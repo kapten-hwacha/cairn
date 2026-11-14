@@ -625,10 +625,10 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   iPadOS / iOS shell styles (Wave 3):
+   iPadOS / iOS shell styles:
    - Touch response & overscroll bounce elimination
-   - Fullscreen viewport safe areas (--lh-sat, --lh-sab)
-   - Suppressed traffic-light offsets and window dragging
+   - Fullscreen & windowed viewport safe areas (--lh-sat, --lh-sab, --lh-sal, --lh-sar)
+   - Top-left traffic-light gutter (92px, matching macOS) & no window dragging
    ───────────────────────────────────────────────────────────────────────── */
 .lh-ios body {
 	overscroll-behavior-y: none;
@@ -642,29 +642,42 @@ body {
 
 .lh-ios .lh-wco-gutter {
 	--lh-wco-right: 0px !important;
-	padding-right: 0.75rem !important;
+	padding-right: max(0.75rem, var(--lh-sar)) !important;
+}
+
+.lh-ios .lh-wco-floating {
+	top: calc(0.5rem + var(--lh-sat));
+	right: calc(0.5rem + var(--lh-sar));
+	max-width: max(0px, calc(100% - 5.5rem - var(--lh-sar)));
 }
 
 .lh-ios .lh-lights-gutter {
-	padding-left: 1rem !important;
+	padding-left: max(92px, calc(1rem + var(--lh-sal)));
 }
 
 .lh-ios .lh-closed-toggle {
-	margin-left: 0px !important;
+	margin-left: max(92px, var(--lh-sal));
 }
 
 .lh-ios .lh-top-bar {
 	padding-top: var(--lh-sat);
+	padding-left: max(0.75rem, var(--lh-sal));
+	padding-right: max(0.75rem, var(--lh-sar));
 	height: calc(3.75rem + var(--lh-sat));
 }
 
 .lh-ios .lh-sidebar-header {
 	padding-top: calc(0.75rem + var(--lh-sat));
+	padding-right: max(1rem, var(--lh-sar));
 	height: calc(3.75rem + var(--lh-sat));
 }
 
 .lh-ios .lh-bottom-safe {
-	padding-bottom: calc(0.75rem + var(--lh-sab));
+	padding-bottom: max(0.75rem, calc(0.75rem + var(--lh-sab)));
+}
+
+.lh-ios .lh-dock-safe {
+	padding-bottom: max(1.25rem, calc(0.5rem + var(--lh-sab)));
 }
 
 .lh-ios .lh-drag {

@@ -308,7 +308,7 @@ export function StudyTimeOverlay({ open, onClose }: { open: boolean; onClose: ()
 					<XIcon className="size-4" />
 				</button>
 			</TopBar>
-			<div className="min-h-0 flex-1 overflow-y-auto">
+			<div className="lh-bottom-safe min-h-0 flex-1 overflow-y-auto">
 				<StudyTimeBody summary={summary} titles={titles} range={range} onRange={onRange} state={state} />
 			</div>
 		</div>

@@ -372,7 +372,7 @@ export function ChainTableBody({
 			    two-column steps — chains pl-12 aligned with the folder icon,
 			    statements pl-21 where a chain icon would sit).
 			    All three columns sort, small chevron on active. */}
-			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+			<div className="lh-bottom-safe flex min-h-0 flex-1 flex-col overflow-y-auto">
 				{/* The TOP rule (owner round 5: the table is framed — a line under
 			    the header, a line under the last group, lines between groups). */}
 				<div className="sticky top-0 z-10 flex shrink-0 items-center gap-1 border-b border-border/60 bg-background/80 px-3 py-1.5 text-[11px] uppercase tracking-widest text-muted-foreground/70 backdrop-blur">
@@ -629,7 +629,7 @@ export function ChainTableBody({
 			    the Google-Photos pattern). Appears only when something is
 			    selected; floats over the table's bottom edge. */}
 			{(selectMode ? selection.size > 0 : selectedSources.size > 0 || fullySelectedFolders.size > 0) && (
-				<div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center pb-4">
+				<div className="lh-dock-safe pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center pb-4">
 					<div
 						data-testid="chain-selection-bar"
 						className="pointer-events-auto flex items-center gap-3 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg"

@@ -433,7 +433,7 @@ function fromBase64(base64: string): Uint8Array {
 			const badge = document.createElement("div");
 			badge.id = "lh-ios-dev-badge";
 			badge.style.cssText =
-				"position:fixed;bottom:8px;right:8px;z-index:99999;padding:4px 8px;font-size:11px;font-family:monospace;background:rgba(0,0,0,0.75);color:#88ff88;border-radius:4px;pointer-events:none;";
+				"position:fixed;bottom:calc(8px + var(--lh-sab, 0px));right:calc(8px + var(--lh-sar, 0px));z-index:99999;padding:4px 8px;font-size:11px;font-family:monospace;background:rgba(0,0,0,0.75);color:#88ff88;border-radius:4px;pointer-events:none;";
 			badge.textContent = `Backend: ${remoteBackend} (Connecting...)`;
 			document.body.appendChild(badge);
 
