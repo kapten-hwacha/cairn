@@ -25,7 +25,7 @@ pub fn kv_get(conn: &Connection, key: &str) -> Result<Option<Value>, String> {
 }
 
 pub fn kv_set(conn: &Connection, key: &str, value: &Value) -> Result<(), String> {
-    let now_ms = crate::storage::migrate::current_time_ms();
+    let now_ms = crate::storage::helpers::current_time_ms();
     let val_json = serde_json::to_string(value).map_err(|e| format!("Serialization error: {e}"))?;
 
     conn.execute(

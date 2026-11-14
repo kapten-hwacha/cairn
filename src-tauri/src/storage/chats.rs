@@ -260,10 +260,10 @@ pub fn save_chat(
         .cloned()
         .unwrap_or_default();
     let message_count = messages.len() as i64;
-    let phase = crate::storage::migrate::derive_phase(&messages);
-    let pending_question = crate::storage::migrate::has_dangling_question(&messages) as i64;
-    let pending_problem = crate::storage::migrate::has_active_problem(&messages) as i64;
-    let seed_rating = crate::storage::migrate::derive_seed_rating(&messages);
+    let phase = crate::storage::helpers::derive_phase(&messages);
+    let pending_question = crate::storage::helpers::has_dangling_question(&messages) as i64;
+    let pending_problem = crate::storage::helpers::has_active_problem(&messages) as i64;
+    let seed_rating = crate::storage::helpers::derive_seed_rating(&messages);
     let messages_json =
         serde_json::to_string(&messages).map_err(|e| format!("Serialization error: {e}"))?;
 
@@ -374,7 +374,7 @@ pub fn save_chat(
     )
     .map_err(|e| format!("Failed to clean practice records: {e}"))?;
 
-    let prs = crate::storage::migrate::extract_practice_records(&id, &messages);
+    let prs = crate::storage::helpers::extract_practice_records(&id, &messages);
     for pr in prs {
         tx.execute(
             r#"
@@ -400,7 +400,7 @@ pub fn save_chat(
     tx.execute("DELETE FROM chats_fts WHERE chat_id = ?1", params![id])
         .map_err(|e| format!("Failed to clean chats_fts: {e}"))?;
 
-    let transcript = crate::storage::migrate::extract_transcript_text(
+    let transcript = crate::storage::helpers::extract_transcript_text(
         &messages,
         record.get("tree"),
         record.get("extractions"),
@@ -412,7 +412,7 @@ pub fn save_chat(
     .map_err(|e| format!("Failed to insert chats_fts: {e}"))?;
 
     // 5. Update FSRS cards
-    crate::storage::migrate::materialize_fsrs_cards(&tx)?;
+    crate::storage::helpers::materialize_fsrs_cards(&tx)?;
 
     tx.commit()
         .map_err(|e| format!("Failed to commit save_chat: {e}"))?;
@@ -444,7 +444,7 @@ pub fn delete_chat(conn: &mut Connection, chat_id: &str) -> Result<bool, String>
         .execute("DELETE FROM chats WHERE id = ?1", params![chat_id])
         .map_err(|e| format!("Failed to delete chat: {e}"))?;
 
-    crate::storage::migrate::materialize_fsrs_cards(&tx)?;
+    crate::storage::helpers::materialize_fsrs_cards(&tx)?;
 
     tx.commit()
         .map_err(|e| format!("Failed to commit delete_chat: {e}"))?;

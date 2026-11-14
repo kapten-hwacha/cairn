@@ -81,7 +81,7 @@ pub fn append_node(conn: &mut Connection, node: &Value) -> Result<(), String> {
     )
     .map_err(|e| format!("Failed to insert nodes_fts: {e}"))?;
 
-    crate::storage::migrate::materialize_fsrs_cards(&tx)?;
+    crate::storage::helpers::materialize_fsrs_cards(&tx)?;
 
     tx.commit()
         .map_err(|e| format!("Failed to commit append_node: {e}"))?;
@@ -574,7 +574,7 @@ pub fn rewrite_ledgers(conn: &mut Connection, next: &Value) -> Result<(), String
             )
             .map_err(|e| format!("Failed to insert rewritten nodes_fts: {e}"))?;
         }
-        crate::storage::migrate::materialize_fsrs_cards(&tx)?;
+        crate::storage::helpers::materialize_fsrs_cards(&tx)?;
     }
 
     if let Some(chains) = next.get("chains").and_then(|v| v.as_array()) {
@@ -747,7 +747,7 @@ pub fn save_graph(conn: &mut Connection, graph: &Value) -> Result<(), String> {
             )
             .map_err(|e| format!("Failed to insert nodes_fts: {e}"))?;
         }
-        crate::storage::migrate::materialize_fsrs_cards(&tx)?;
+        crate::storage::helpers::materialize_fsrs_cards(&tx)?;
     }
 
     if let Some(chains) = graph.get("chains").and_then(|v| v.as_array()) {
@@ -1433,7 +1433,7 @@ pub async fn lh_save_fsrs_cards(
 #[tauri::command]
 pub async fn lh_recompute_fsrs_cards(state: State<'_, DbState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
-    crate::storage::migrate::materialize_fsrs_cards(&conn)
+    crate::storage::helpers::materialize_fsrs_cards(&conn)
 }
 
 #[tauri::command]
@@ -1616,7 +1616,7 @@ mod tests {
         assert_eq!(read_cards[1]["nodeId"], "node_1");
 
         // 8. materialize_fsrs_cards prunes orphaned cards when node is deleted from graph_nodes
-        crate::storage::migrate::materialize_fsrs_cards(&conn).unwrap();
+        crate::storage::helpers::materialize_fsrs_cards(&conn).unwrap();
         let cards_after_prune = read_fsrs_cards(&conn, None).unwrap();
         assert_eq!(cards_after_prune.len(), 1);
         assert_eq!(cards_after_prune[0]["nodeId"], "node_2");
