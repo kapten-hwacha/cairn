@@ -54,10 +54,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CacheRetention } from "@earendil-works/pi-ai";
 import { CacheRetentionMenu, cacheRetentionLabel } from "./cache-retention-menu.tsx";
-import { MenuShell } from "@/components/menu-shell";
-import { useSettingsSaved } from "@/components/settings-signal";
-import { defaultOrderLevel, populateLevel } from "@/components/thinking-default";
-import { useModelCatalog } from "@/components/model-catalog";
+import { MenuShell } from "@/components/shell/menu-shell";
+import { useSettingsSaved } from "@/components/shared/settings-signal";
+import { defaultOrderLevel, populateLevel } from "@/components/markdown/thinking-default";
+import { useModelCatalog } from "@/components/shared/model-catalog";
 import { Hint } from "@/components/ui/hint";
 import type React from "react";
 import {
@@ -74,7 +74,7 @@ import {
 	type SearchEngineId,
 } from "@/src/core";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import { prettyModel } from "@/components/usage-format";
+import { prettyModel } from "@/components/shared/usage-format";
 import { cn } from "@/lib/utils";
 import { SettingsGroup, SettingsRow, SettingsMenuTrigger, Toggle, CommitInput } from "./controls.tsx";
 import { ModelMenuList, ThinkingMenuList } from "./model-menu";

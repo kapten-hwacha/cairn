@@ -30,7 +30,7 @@ import {
 	useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { useBackdropDismiss } from "@/components/backdrop-dismiss";
+import { useBackdropDismiss } from "@/components/shared/backdrop-dismiss";
 import {
 	CURRENT_SETTINGS_VERSION,
 	type AgentSettings,
@@ -46,8 +46,8 @@ import { SettingsSection } from "./controls.tsx";
 import { UpdateSettings } from "./update-settings.tsx";
 import { AgentSection, prefetchAgent } from "./agent-section.tsx";
 import type { ModelsSettings } from "@/src/core";
-import { MENU_CLOSE_EVENT, MENU_OPEN_EVENT } from "@/components/menu-shell";
-import { notifySettingsSaved } from "@/components/settings-signal";
+import { MENU_CLOSE_EVENT, MENU_OPEN_EVENT } from "@/components/shell/menu-shell";
+import { notifySettingsSaved } from "@/components/shared/settings-signal";
 import { KeysSection, prefetchKeys } from "./keys-section.tsx";
 import { Hint } from "@/components/ui/hint";
 import { AppearanceSection, GraphSection } from "./appearance-section.tsx";

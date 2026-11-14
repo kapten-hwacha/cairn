@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Home } from "@/components/home";
-import { NewSession } from "@/components/new-session";
-import { Chat } from "@/components/chat";
+import { Home } from "@/components/shell/home";
+import { NewSession } from "@/components/session/new-session";
+import { Chat } from "@/components/chat/chat";
 import { resolveSettings, slotsConfigured, type UserSettings } from "@/src/core";
 import { usePathname, useRouter, useSearchParams } from "./router.tsx";
 

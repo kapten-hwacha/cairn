@@ -1,4 +1,4 @@
-import { NewSession } from "@/components/new-session";
+import { NewSession } from "@/components/session/new-session";
 import { readSettingsRecord } from "@/src/server";
 import { slotsConfigured } from "@/src/core";
 

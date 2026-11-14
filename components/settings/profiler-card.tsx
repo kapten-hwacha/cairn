@@ -9,7 +9,7 @@ import {
 	type AgentSettings,
 	type ProfilerStatusResponse,
 } from "@/src/core";
-import { notifySettingsSaved } from "@/components/settings-signal";
+import { notifySettingsSaved } from "@/components/shared/settings-signal";
 import { SettingsGroup, SettingsRow, Toggle, CommitInput } from "./controls.tsx";
 
 /**

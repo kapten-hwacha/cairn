@@ -6,9 +6,9 @@ import "../../app/globals.css";
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AppShell, SidebarProvider } from "@/components/sidebar";
-import { ActivityProvider } from "@/components/activity-dock";
-import { ServerEventsProvider } from "@/components/server-events";
+import { AppShell, SidebarProvider } from "@/components/shell/sidebar";
+import { ActivityProvider } from "@/components/shell/activity-dock";
+import { ServerEventsProvider } from "@/components/shared/server-events";
 import { AppearanceProvider } from "@/components/settings/appearance";
 import { initWorkerClient } from "./worker-client.ts";
 import { installTauriPreload } from "./tauri-preload.ts";

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Chat } from "@/components/chat";
+import { Chat } from "@/components/chat/chat";
 import { slotsConfigured } from "@/src/core";
 import { compactionInFlight, getChat, isTurnRunning, readSettingsRecord, turnFailure } from "@/src/server";
 

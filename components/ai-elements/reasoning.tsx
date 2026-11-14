@@ -1,7 +1,7 @@
 "use client";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { blurAfterPointerClick } from "@/components/focus-hygiene";
+import { blurAfterPointerClick } from "@/components/shared/focus-hygiene";
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "lucide-react";
-import { BrailleSpinner } from "@/components/braille-spinner";
+import { BrailleSpinner } from "@/components/shared/braille-spinner";
 import type { ComponentProps, ReactNode } from "react";
 import {
   createContext,
@@ -25,7 +25,7 @@ import { Streamdown } from "streamdown";
 
 import { transformMathDelimiters } from "@/src/core";
 import { streamdownPlugins, streamdownRemend } from "./message";
-import { mdComponents } from "@/components/md-blocks";
+import { mdComponents } from "@/components/markdown/md-blocks";
 import { Shimmer } from "./shimmer";
 
 interface ReasoningContextValue {

@@ -1,4 +1,4 @@
-import { Home } from "@/components/home";
+import { Home } from "@/components/shell/home";
 import { readSettingsRecord } from "@/src/server";
 import { resolveSettings, slotsConfigured } from "@/src/core";
 

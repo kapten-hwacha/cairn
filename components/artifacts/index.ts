@@ -6,7 +6,7 @@ import { PlotCard, VisualCard } from "@/components/artifacts/visual-card";
 import { ImageCard } from "@/components/artifacts/image-card";
 import { ProbeDoneCard } from "@/components/artifacts/probe-done-card";
 import { ToolCallCard } from "@/components/artifacts/tool-call-card";
-import { ProblemCard, ConcludeCard } from "@/components/practice-cards";
+import { ProblemCard, ConcludeCard } from "@/components/practice/practice-cards";
 
 /**
  * Artifact renderer registry — the extension point for tool-part UI.

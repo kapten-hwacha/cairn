@@ -34,7 +34,7 @@ import {
   Streamdown,
   type PluginConfig,
 } from "streamdown";
-import { mdComponents } from "@/components/md-blocks";
+import { mdComponents } from "@/components/markdown/md-blocks";
 import { repairMathForDisplay, transformMathDelimiters } from "@/src/core";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {

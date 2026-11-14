@@ -39,9 +39,9 @@ import { SubscriptionConnections } from "./subscription-connections.tsx";
 import { ClaudeCodeInstallationStatus } from "./claude-code-status.tsx";
 import { CliProxyStatus } from "./cliproxy-status.tsx";
 import { ProviderMenuList } from "./model-menu.tsx";
-import { MenuShell } from "@/components/menu-shell";
-import { notifySettingsSaved, useSettingsSaved } from "@/components/settings-signal";
-import { DictationLanguageSetting } from "@/components/dictation-language";
+import { MenuShell } from "@/components/shell/menu-shell";
+import { notifySettingsSaved, useSettingsSaved } from "@/components/shared/settings-signal";
+import { DictationLanguageSetting } from "@/components/dictation/dictation-language";
 
 /** One pi-ai provider with plain API-key auth (the Platform seam —
  *  derived from pi-ai's own env-key table; no drift possible). */

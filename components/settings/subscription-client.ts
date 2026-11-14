@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { ChatGPTControlBridge, ChatGPTStatus, NativeSubscriptionControlBridge, NativeSubscriptionProviderId, NativeSubscriptionStatus } from "@/src/core";
-import { useNotifyHub, type createNotifyHub } from "@/components/server-events";
+import { useNotifyHub, type createNotifyHub } from "@/components/shared/server-events";
 
 type Hub = ReturnType<typeof createNotifyHub> | null;
 type Reply<T> = { value: T; browserAction?: string; error?: string };

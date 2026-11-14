@@ -9,11 +9,11 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { ChatActionsContext } from "@/components/chat";
+import { ChatActionsContext } from "@/components/chat/chat";
 import { Toggle } from "@/components/settings/controls";
 import { InvertDiscIcon } from "./invert-disc";
 import { downloadFile, slugFilename } from "./download";
-import { noteStudyInput, checkStudyFocus } from "@/components/study-tracker";
+import { noteStudyInput, checkStudyFocus } from "@/components/practice/study-tracker";
 import { PLOT3D_DEADLINE_MS, type Plot3DResult } from "@/src/core";
 export function InteractivePlotCard({
   result,

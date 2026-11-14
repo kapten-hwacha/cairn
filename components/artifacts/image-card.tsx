@@ -1,7 +1,7 @@
 "use client";
 
 import { DownloadIcon, MaximizeIcon } from "lucide-react";
-import { useSessionMermaid } from "@/components/session-overlay";
+import { useSessionMermaid } from "@/components/session/session-overlay";
 import { downloadFile } from "@/components/artifacts/download";
 import { ToolCallCard } from "@/components/artifacts/tool-call-card";
 import type { ArtifactPartProps, ImageSnapshot, ShowImageDetails } from "@/src/core";

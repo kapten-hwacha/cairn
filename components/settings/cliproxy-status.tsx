@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type CliProxyStatus, type UserSettings } from "@/src/core";
-import { notifySettingsSaved, useSettingsSaved } from "@/components/settings-signal";
+import { notifySettingsSaved, useSettingsSaved } from "@/components/shared/settings-signal";
 import { getCachedSettingsRecord } from "./settings-dialog";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "./controls";

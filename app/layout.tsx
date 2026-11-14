@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 import "katex/dist/katex.min.css";
 import "./globals.css";
-import { AppShell, SidebarProvider } from "@/components/sidebar";
-import { ActivityProvider } from "@/components/activity-dock";
-import { ServerEventsProvider } from "@/components/server-events";
+import { AppShell, SidebarProvider } from "@/components/shell/sidebar";
+import { ActivityProvider } from "@/components/shell/activity-dock";
+import { ServerEventsProvider } from "@/components/shared/server-events";
 import { AppearanceProvider } from "@/components/settings/appearance";
 
 // Chrome = JetBrains Mono, teaching prose = Source Sans 3, titles = CMU

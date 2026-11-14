@@ -2,10 +2,10 @@
 
 import { useContext } from "react";
 import { CheckIcon, SettingsIcon, XIcon } from "lucide-react";
-import { JobsContext } from "@/components/jobs-context";
-import { ChatActionsContext } from "@/components/chat";
+import { JobsContext } from "@/components/shared/jobs-context";
+import { ChatActionsContext } from "@/components/chat/chat";
 import { isModelsRefusal, isProviderKeyRefusal, type JobKind, type JobRecord } from "@/src/core";
-import { BrailleSpinner } from "@/components/braille-spinner";
+import { BrailleSpinner } from "@/components/shared/braille-spinner";
 
 /**
  * The dispatch card (contracts.ts "THE ASYNC PROTOCOL" §4): the tool-call

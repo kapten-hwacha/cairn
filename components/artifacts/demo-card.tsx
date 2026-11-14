@@ -4,10 +4,10 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { DownloadIcon } from "lucide-react";
 import { Toggle } from "@/components/settings/controls";
 import { InvertDiscIcon } from "@/components/artifacts/invert-disc";
-import { ChatActionsContext } from "@/components/chat";
+import { ChatActionsContext } from "@/components/chat/chat";
 import { downloadFile, slugFilename } from "@/components/artifacts/download";
 import { DispatchCard } from "@/components/artifacts/dispatch-card";
-import { checkStudyFocus, noteStudyInput } from "@/components/study-tracker";
+import { checkStudyFocus, noteStudyInput } from "@/components/practice/study-tracker";
 import type { ArtifactPartProps, DemoResult } from "@/src/core";
 
 /**
