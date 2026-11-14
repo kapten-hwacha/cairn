@@ -243,6 +243,40 @@ describe("Worker MessageChannel transport & Vite dev bridge security", () => {
 			} as unknown as IncomingMessage),
 			true,
 		);
+
+		// Rejects non-loopback socket remoteAddress when TAURI_DEV_HOST is unset
+		assert.equal(
+			isAuthorizedDevBridgeRequest({
+				method: "GET",
+				headers: { "x-lh-dev-bridge": "1", host: "localhost:5173" },
+				socket: { remoteAddress: "192.168.1.50" },
+			} as unknown as IncomingMessage),
+			false,
+		);
+		assert.equal(
+			isAuthorizedDevBridgeRequest({
+				method: "GET",
+				headers: { "x-lh-dev-bridge": "1", host: "localhost:5173" },
+				socket: { remoteAddress: "127.0.0.1" },
+			} as unknown as IncomingMessage),
+			true,
+		);
+
+		// Rejects DNS rebinding Host header or Origin: null
+		assert.equal(
+			isAuthorizedDevBridgeRequest({
+				method: "GET",
+				headers: { "x-lh-dev-bridge": "1", host: "rebind.evil.example:5173" },
+			} as unknown as IncomingMessage),
+			false,
+		);
+		assert.equal(
+			isAuthorizedDevBridgeRequest({
+				method: "GET",
+				headers: { "x-lh-dev-bridge": "1", origin: "null", host: "localhost:5173" },
+			} as unknown as IncomingMessage),
+			false,
+		);
 	});
 
 	it("rejects symlinks inside dataDir pointing outside dataDir in isAllowedSyncPath", () => {

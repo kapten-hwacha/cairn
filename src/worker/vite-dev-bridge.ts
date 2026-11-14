@@ -4,11 +4,25 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { realSourcePath, resolvePolicy } from "../agent/tools/file-access.ts";
 import { resolveSourcePath } from "../agent/tools/fs-shared.ts";
+import { isAllowedLocalHost } from "../server/desktop-access.ts";
 import { fileAccessPolicy } from "../server/file-access.ts";
+
+const MAX_DEV_BODY_BYTES = 10 * 1024 * 1024;
+const MAX_DEV_FETCH_RESPONSE_BYTES = 55 * 1024 * 1024;
 
 export function isAuthorizedDevBridgeRequest(req: IncomingMessage): boolean {
 	if (req.headers["x-lh-dev-bridge"] !== "1") {
 		return false;
+	}
+	const remoteAddress = req.socket?.remoteAddress;
+	if (typeof remoteAddress === "string" && remoteAddress.length > 0 && !process.env.TAURI_DEV_HOST) {
+		if (
+			remoteAddress !== "127.0.0.1" &&
+			remoteAddress !== "::1" &&
+			remoteAddress !== "::ffff:127.0.0.1"
+		) {
+			return false;
+		}
 	}
 	const secFetchSite = req.headers["sec-fetch-site"];
 	if (typeof secFetchSite === "string") {
@@ -16,9 +30,15 @@ export function isAuthorizedDevBridgeRequest(req: IncomingMessage): boolean {
 			return false;
 		}
 	}
-	const origin = req.headers["origin"];
 	const host = req.headers["host"];
-	if (typeof origin === "string" && typeof host === "string") {
+	if (typeof host === "string" && !isAllowedLocalHost(host)) {
+		return false;
+	}
+	const origin = req.headers["origin"];
+	if (typeof origin === "string") {
+		if (origin === "null" || typeof host !== "string") {
+			return false;
+		}
 		try {
 			const parsed = new URL(origin);
 			if (parsed.host !== host) {
@@ -35,6 +55,45 @@ export function isAuthorizedDevBridgeRequest(req: IncomingMessage): boolean {
 		}
 	}
 	return true;
+}
+
+export function assertSafeDevFetchUrl(targetUrl: string): URL {
+	let parsed: URL;
+	try {
+		parsed = new URL(targetUrl);
+	} catch {
+		throw new Error("Invalid URL");
+	}
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		throw new Error(`Forbidden protocol: ${parsed.protocol}`);
+	}
+	if (parsed.username !== "" || parsed.password !== "") {
+		throw new Error("URLs with credentials are not allowed");
+	}
+	const hostname = parsed.hostname.toLowerCase().replace(/\.$/, "");
+	if (
+		hostname === "169.254.169.254" ||
+		hostname === "metadata.google.internal" ||
+		hostname === "0.0.0.0" ||
+		hostname.startsWith("169.254.") ||
+		hostname === "[::]" ||
+		hostname.startsWith("[fe80:") ||
+		hostname === "[fd00:ec2::254]" ||
+		hostname.startsWith("[::ffff:169.254.") ||
+		hostname.startsWith("[::ffff:a9fe:") ||
+		hostname === "[::ffff:0.0.0.0]" ||
+		hostname === "[::ffff:0:0]" ||
+		hostname.startsWith("[64:ff9b:") ||
+		hostname === "nip.io" ||
+		hostname.endsWith(".nip.io") ||
+		hostname === "sslip.io" ||
+		hostname.endsWith(".sslip.io") ||
+		hostname === "xip.io" ||
+		hostname.endsWith(".xip.io")
+	) {
+		throw new Error(`Forbidden host: ${hostname}`);
+	}
+	return parsed;
 }
 
 export function isAllowedSyncPath(targetPath: string, dataDir: string, authFile: string): boolean {
@@ -62,13 +121,21 @@ export function isAllowedSyncPath(targetPath: string, dataDir: string, authFile:
 	return true;
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+function readBody(req: IncomingMessage, maxBytes = MAX_DEV_BODY_BYTES): Promise<string> {
 	return new Promise((resolve, reject) => {
-		let data = "";
-		req.on("data", (chunk) => {
-			data += chunk;
+		const chunks: Buffer[] = [];
+		let total = 0;
+		req.on("data", (chunk: Buffer | string) => {
+			const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+			total += buf.length;
+			if (total > maxBytes) {
+				req.destroy();
+				reject(new Error(`Request body too large (> ${maxBytes} bytes)`));
+				return;
+			}
+			chunks.push(buf);
 		});
-		req.on("end", () => resolve(data));
+		req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
 		req.on("error", reject);
 	});
 }
@@ -124,50 +191,61 @@ export function lhViteDevBridgePlugin(): Plugin {
 				if (url === "/__lh_dev/fetch" && req.method === "POST") {
 					try {
 						const bodyStr = await readBody(req);
-						const { url: targetUrl, method, headers, body } = JSON.parse(bodyStr) as {
+						const { url: targetUrl, method, headers, body, redirect } = JSON.parse(bodyStr) as {
 							url: string;
 							method?: string;
 							headers?: Record<string, string>;
 							body?: string;
+							redirect?: RequestRedirect;
 						};
 
-						let parsed: URL;
+						let currentUrl: string;
 						try {
-							parsed = new URL(targetUrl);
-						} catch {
-							res.statusCode = 400;
+							currentUrl = assertSafeDevFetchUrl(targetUrl).toString();
+						} catch (urlErr) {
+							const msg = urlErr instanceof Error ? urlErr.message : String(urlErr);
+							res.statusCode = msg === "Invalid URL" ? 400 : 403;
 							res.setHeader("Content-Type", "application/json");
-							res.end(JSON.stringify({ error: "Invalid URL" }));
+							res.end(JSON.stringify({ error: msg }));
 							return;
 						}
 
-						if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-							res.statusCode = 403;
-							res.setHeader("Content-Type", "application/json");
-							res.end(JSON.stringify({ error: `Forbidden protocol: ${parsed.protocol}` }));
-							return;
+						let response: Response;
+						let hops = 0;
+						const redirectMode = redirect ?? "follow";
+						while (true) {
+							response = await fetch(currentUrl, {
+								method: method || "GET",
+								headers,
+								body: body && method !== "GET" && method !== "HEAD" ? body : undefined,
+								redirect: "manual",
+							});
+							if (
+								redirectMode === "follow" &&
+								response.status >= 300 &&
+								response.status < 400
+							) {
+								const location = response.headers.get("location");
+								if (!location) break;
+								hops++;
+								if (hops > 10) {
+									res.statusCode = 502;
+									res.end("Too many redirects");
+									return;
+								}
+								try {
+									const nextUrl = new URL(location, currentUrl).toString();
+									currentUrl = assertSafeDevFetchUrl(nextUrl).toString();
+								} catch (redirectErr) {
+									res.statusCode = 403;
+									res.setHeader("Content-Type", "application/json");
+									res.end(JSON.stringify({ error: String(redirectErr) }));
+									return;
+								}
+								continue;
+							}
+							break;
 						}
-
-						const hostname = parsed.hostname.toLowerCase();
-						if (
-							hostname === "169.254.169.254" ||
-							hostname === "metadata.google.internal" ||
-							hostname === "0.0.0.0" ||
-							hostname.startsWith("169.254.") ||
-							hostname === "[::]" ||
-							hostname.startsWith("[fe80:")
-						) {
-							res.statusCode = 403;
-							res.setHeader("Content-Type", "application/json");
-							res.end(JSON.stringify({ error: `Forbidden host: ${hostname}` }));
-							return;
-						}
-
-						const response = await fetch(targetUrl, {
-							method: method || "GET",
-							headers,
-							body: body && method !== "GET" && method !== "HEAD" ? body : undefined,
-						});
 
 						res.statusCode = response.status;
 						response.headers.forEach((value, key) => {
@@ -177,9 +255,16 @@ export function lhViteDevBridgePlugin(): Plugin {
 
 						if (response.body) {
 							const reader = response.body.getReader();
+							let totalWritten = 0;
 							while (true) {
 								const { done, value } = await reader.read();
 								if (done) break;
+								totalWritten += value.byteLength;
+								if (totalWritten > MAX_DEV_FETCH_RESPONSE_BYTES) {
+									await reader.cancel();
+									res.destroy();
+									return;
+								}
 								res.write(value);
 							}
 							res.end();

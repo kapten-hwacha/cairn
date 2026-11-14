@@ -11,7 +11,7 @@ import {
 export default defineConfig(({ mode }) => ({
 	base: "./",
 	server: {
-		host: process.env.TAURI_DEV_HOST || "0.0.0.0",
+		host: process.env.TAURI_DEV_HOST || "127.0.0.1",
 		port: 5173,
 	},
 	define: {
