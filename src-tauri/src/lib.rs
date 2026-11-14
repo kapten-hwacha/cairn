@@ -3,6 +3,7 @@ pub mod exec;
 pub mod fs_bridge;
 pub mod http_bridge;
 pub mod oauth;
+pub mod pencilkit;
 pub mod storage;
 pub mod window;
 
@@ -133,6 +134,8 @@ pub fn run() {
                 exec::lh_kill_process,
                 window::lh_expand_window,
                 window::lh_set_zoom,
+                pencilkit::lh_pencil_open_drawer,
+                pencilkit::lh_pencil_close_drawer,
             ]);
 
     builder = builder.setup(|app| {
